@@ -2,6 +2,7 @@ package mgr
 
 import "C"
 import (
+	"bytes"
 	"connectrpc.com/connect"
 	"context"
 	"errors"
@@ -10,6 +11,13 @@ import (
 	"github.com/flyqie/memobird-priv/internal/helper"
 	"github.com/flyqie/memobird-priv/internal/model"
 	"github.com/flyqie/memobird-priv/internal/pkg/log"
+	"github.com/sergeymakinen/go-bmp"
+	"image"
+	"image/color"
+	"image/draw"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"strconv"
 	"time"
 )
@@ -105,12 +113,9 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 	defer s.Bird.DeviceMapLock.RUnlock()
 	if v, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
 		if v.PaperMessageQueue != nil {
-			// 获取总大小用来分包
 			var baseTextLen int64 = 0
 			for _, _v := range req.Msg.Content.Content {
-				if _v.Type == v1.SendMsgRequestContentContent_TEXT || _v.Type == v1.SendMsgRequestContentContent_IMAGE {
-					baseTextLen += int64(len(_v.Content.(*v1.SendMsgRequestContentContent_Text).Text))
-				}
+				baseTextLen += int64(len(_v.BaseText))
 			}
 			var pkgCount int64 = 1
 			var pkgNo int64 = 0
@@ -157,20 +162,14 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 						paperMsgContent.Type = 3
 					}
 					var isContentEnd = true
-					switch _v.Content.(type) {
-					case *v1.SendMsgRequestContentContent_Text:
-						contentBytes := _v.Content.(*v1.SendMsgRequestContentContent_Text).Text
-						paperMsgContent.Content = string(_v.Content.(*v1.SendMsgRequestContentContent_Text).Text)
-						if len(contentBytes) > 25600 {
-							isContentEnd = false
-							paperMsgContent.Content = string(contentBytes[:25600])
-							_v.Content.(*v1.SendMsgRequestContentContent_Text).Text = contentBytes[25600:]
-						} else {
-							paperMsgContent.Content = string(contentBytes)
-						}
-					case *v1.SendMsgRequestContentContent_IconID:
-						paperMsgContent.IconID = _v.Content.(*v1.SendMsgRequestContentContent_IconID).IconID
+					if len(_v.BaseText) > 25600 {
+						isContentEnd = false
+						paperMsgContent.Content = string(_v.BaseText[:25600])
+						_v.BaseText = _v.BaseText[25600:]
+					} else {
+						paperMsgContent.Content = string(_v.BaseText)
 					}
+					paperMsgContent.IconID = _v.IconID
 					paperMsg.Content = append(paperMsg.Content, paperMsgContent)
 					if isContentEnd {
 						contentNo++
@@ -188,13 +187,14 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 			}
 
 			if len(papers) > 1 {
-				// 需要分包,分包需要写锁保证不会有其他消息插入
+				// 分包需要写锁保证不会有其他消息插入
 				v.PaperMessageQueuePkgLock.Lock()
 				defer v.PaperMessageQueuePkgLock.Unlock()
 			} else {
 				v.PaperMessageQueuePkgLock.RLock()
 				defer v.PaperMessageQueuePkgLock.RUnlock()
 			}
+			apiServerLog.WithField("smartGuid", v.SmartGuid).WithField("pkgCount", pkgCount).WithField("pkgNo", pkgNo).Debugf("SendMsg")
 			for _, _v := range papers {
 				// 插入消息队列
 				v.PaperMessageQueue <- _v
@@ -206,4 +206,50 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 	} else {
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
 	}
+}
+
+func (s *ApiServer) MakeMonoBmp(ctx context.Context, req *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error) {
+	makeBmpFunc := func(input []byte) ([]byte, error) {
+		reader := bytes.NewReader(input)
+		srcImg, _, err := image.Decode(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		bounds := srcImg.Bounds()
+		palette := []color.Color{color.White, color.Black}
+		palettedImg := image.NewPaletted(bounds, palette)
+
+		draw.Draw(palettedImg, bounds, srcImg, bounds.Min, draw.Src)
+
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				c := srcImg.At(x, y)
+				grayColor := color.GrayModel.Convert(c).(color.Gray)
+				if grayColor.Y > 128 {
+					palettedImg.Set(x, y, color.White)
+				} else {
+					palettedImg.Set(x, y, color.Black)
+				}
+			}
+		}
+
+		var output bytes.Buffer
+		err = bmp.Encode(&output, palettedImg)
+		if err != nil {
+			return nil, err
+		}
+
+		return output.Bytes(), nil
+	}
+
+	output, err := makeBmpFunc(req.Msg.Image)
+	if err != nil {
+		return nil, helper.WrapConnectErrorDetail(connect.NewError(connect.CodeInternal, errors.New(model.MakeBmpFailed)), &v1.ErrDetail{
+			Message: err.Error(),
+		})
+	}
+	return connect.NewResponse(&v1.MakeMonoBmpResponse{
+		Bmp: output,
+	}), nil
 }

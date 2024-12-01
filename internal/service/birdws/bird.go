@@ -228,14 +228,15 @@ func (b *Bird) makeMsg(device *model.BirdDevice, msg *model.BirdPaperMessage) ([
 			s2cPMCTL.Bold = 1
 		}
 		s2cPMCTL.FontSize = v.FontSize
+		if v.Content != "" {
+			s2cPMCTL.Basetext = base64.StdEncoding.EncodeToString([]byte(v.Content))
+		}
 		if v.Type == 1 {
 			// 文字
 			s2cPMCTL.PrintType = 1
-			s2cPMCTL.Basetext = base64.StdEncoding.EncodeToString([]byte(v.Content))
 		} else if v.Type == 2 {
 			// 图片
 			s2cPMCTL.PrintType = 5
-			s2cPMCTL.Basetext = base64.StdEncoding.EncodeToString([]byte(v.Content))
 		} else if v.Type == 3 {
 			// 图标
 			s2cPMCTL.PrintType = 4

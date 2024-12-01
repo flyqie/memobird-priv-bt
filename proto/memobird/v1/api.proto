@@ -109,12 +109,18 @@ message SendMsgRequestContentContent {
   // 加粗
   bool bold = 3;
   // 纸条内容
-  oneof content {
-    // 文字或者图片数据
-    bytes text = 5;
-    // 图标ID, 对应图标表
-    int64 iconID = 4;
-  }
+  // 图标ID, 对应图标表
+  int64 iconID = 4;
+  // 文字或者图片数据
+  bytes baseText = 5;
+}
+
+message MakeMonoBmpRequest {
+  bytes image = 1;
+}
+
+message MakeMonoBmpResponse {
+  bytes bmp = 1;
 }
 
 service ApiService {
@@ -124,8 +130,11 @@ service ApiService {
   rpc DeviceDetail(GenericRequest) returns (DeviceDetailResponse) {}
   // 踢出设备
   rpc KickDevice(GenericRequest) returns (GenericResponse) {}
-  // 设置设备参数
+  // 设置设备参数(暂时禁用)
   rpc SetDevice(SetDeviceRequest) returns (GenericResponse) {}
   // 发送纸条
   rpc SendMsg(SendMsgRequest) returns (GenericResponse) {}
+
+  // 获取单色位图
+  rpc MakeMonoBmp(MakeMonoBmpRequest) returns (MakeMonoBmpResponse) {}
 }

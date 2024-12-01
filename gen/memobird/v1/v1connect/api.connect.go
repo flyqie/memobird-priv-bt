@@ -44,6 +44,8 @@ const (
 	ApiServiceSetDeviceProcedure = "/memobird.v1.ApiService/SetDevice"
 	// ApiServiceSendMsgProcedure is the fully-qualified name of the ApiService's SendMsg RPC.
 	ApiServiceSendMsgProcedure = "/memobird.v1.ApiService/SendMsg"
+	// ApiServiceMakeMonoBmpProcedure is the fully-qualified name of the ApiService's MakeMonoBmp RPC.
+	ApiServiceMakeMonoBmpProcedure = "/memobird.v1.ApiService/MakeMonoBmp"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -54,6 +56,7 @@ var (
 	apiServiceKickDeviceMethodDescriptor        = apiServiceServiceDescriptor.Methods().ByName("KickDevice")
 	apiServiceSetDeviceMethodDescriptor         = apiServiceServiceDescriptor.Methods().ByName("SetDevice")
 	apiServiceSendMsgMethodDescriptor           = apiServiceServiceDescriptor.Methods().ByName("SendMsg")
+	apiServiceMakeMonoBmpMethodDescriptor       = apiServiceServiceDescriptor.Methods().ByName("MakeMonoBmp")
 )
 
 // ApiServiceClient is a client for the memobird.v1.ApiService service.
@@ -64,10 +67,12 @@ type ApiServiceClient interface {
 	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
 	// 踢出设备
 	KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
-	// 设置设备参数
+	// 设置设备参数(暂时禁用)
 	SetDevice(context.Context, *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 发送纸条
 	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error)
+	// 获取单色位图
+	MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error)
 }
 
 // NewApiServiceClient constructs a client for the memobird.v1.ApiService service. By default, it
@@ -110,6 +115,12 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(apiServiceSendMsgMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		makeMonoBmp: connect.NewClient[v1.MakeMonoBmpRequest, v1.MakeMonoBmpResponse](
+			httpClient,
+			baseURL+ApiServiceMakeMonoBmpProcedure,
+			connect.WithSchema(apiServiceMakeMonoBmpMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -120,6 +131,7 @@ type apiServiceClient struct {
 	kickDevice        *connect.Client[v1.GenericRequest, v1.GenericResponse]
 	setDevice         *connect.Client[v1.SetDeviceRequest, v1.GenericResponse]
 	sendMsg           *connect.Client[v1.SendMsgRequest, v1.GenericResponse]
+	makeMonoBmp       *connect.Client[v1.MakeMonoBmpRequest, v1.MakeMonoBmpResponse]
 }
 
 // ListOnlineDevices calls memobird.v1.ApiService.ListOnlineDevices.
@@ -147,6 +159,11 @@ func (c *apiServiceClient) SendMsg(ctx context.Context, req *connect.Request[v1.
 	return c.sendMsg.CallUnary(ctx, req)
 }
 
+// MakeMonoBmp calls memobird.v1.ApiService.MakeMonoBmp.
+func (c *apiServiceClient) MakeMonoBmp(ctx context.Context, req *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error) {
+	return c.makeMonoBmp.CallUnary(ctx, req)
+}
+
 // ApiServiceHandler is an implementation of the memobird.v1.ApiService service.
 type ApiServiceHandler interface {
 	// 获取在线设备列表
@@ -155,10 +172,12 @@ type ApiServiceHandler interface {
 	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
 	// 踢出设备
 	KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
-	// 设置设备参数
+	// 设置设备参数(暂时禁用)
 	SetDevice(context.Context, *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 发送纸条
 	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error)
+	// 获取单色位图
+	MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error)
 }
 
 // NewApiServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -197,6 +216,12 @@ func NewApiServiceHandler(svc ApiServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(apiServiceSendMsgMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	apiServiceMakeMonoBmpHandler := connect.NewUnaryHandler(
+		ApiServiceMakeMonoBmpProcedure,
+		svc.MakeMonoBmp,
+		connect.WithSchema(apiServiceMakeMonoBmpMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/memobird.v1.ApiService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ApiServiceListOnlineDevicesProcedure:
@@ -209,6 +234,8 @@ func NewApiServiceHandler(svc ApiServiceHandler, opts ...connect.HandlerOption) 
 			apiServiceSetDeviceHandler.ServeHTTP(w, r)
 		case ApiServiceSendMsgProcedure:
 			apiServiceSendMsgHandler.ServeHTTP(w, r)
+		case ApiServiceMakeMonoBmpProcedure:
+			apiServiceMakeMonoBmpHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -236,4 +263,8 @@ func (UnimplementedApiServiceHandler) SetDevice(context.Context, *connect.Reques
 
 func (UnimplementedApiServiceHandler) SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.SendMsg is not implemented"))
+}
+
+func (UnimplementedApiServiceHandler) MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.MakeMonoBmp is not implemented"))
 }

@@ -92,7 +92,7 @@ type BirdPaperMessageContent struct {
 	FontSize int
 	// 加粗
 	Bold bool
-	// 图标ID, 对应图标表, 传了这个之后Content就可以不用传了
+	// 图标ID, 对应图标表
 	IconID int64
 	// 实际内容(可以是单色位图也可以是文本)
 	Content string
@@ -180,7 +180,7 @@ type S2CPaperMessageContentTextList struct {
 	// FONT_UNDERLINE_FILAMENT = 129;
 	// FONT_UNDERLINE_NULL = 0;
 	FontSize int `json:"fontSize"`
-	// 图标ID, 对应图标表, 传了这个之后basetext就可以不用传了
+	// 图标ID, 对应图标表
 	IconID int64 `json:"iconID"`
 	// @unused
 	IsHead bool `json:"isHead"`
