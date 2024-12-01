@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package memobird.v1;
+
+option go_package = "github.com/flyqie/memobird-priv/gen/memobird/v1;v1";
+
+message ErrDetail {
+  // 错误信息
+  string message = 1;
+}
+
+message GenericRequest {
+  // 咕咕鸡设备GUID
+  string smartGuid = 1;
+}
+
+message GenericResponse {
+  // 目前空响应
+}
+
+message ListOnlineDevicesRequest {
+  // 目前空请求
+}
+
+message ListOnlineDevicesResponse {
+  // 当前咕咕鸡设备GUID列表
+  repeated string onlineDevices = 1;
+}
+
+message DeviceDetailResponse {
+  // 咕咕鸡设备GUID
+  string smartGuid = 1;
+  // MAC地址
+  string bssid = 2;
+  // LED状态
+  int32 led = 3;
+  // 蜂鸣器状态
+  int32 buz = 4;
+  // LED频闪频率(?)
+  int64 speed = 5;
+  // 固件版本(?)
+  string ver = 6;
+  // 语言ID(?)
+  int32 languageId = 7;
+  // 设备忙碌状态
+  int32 busy = 8;
+  // 旅程长度信息
+  int64 trip = 9;
+  // 设备加入时间
+  int64 joinTime = 10;
+  // 已发送消息数量
+  uint64 msgCount = 11;
+  // 队列消息数量
+  uint64 msgQueueCount = 12;
+  // 设备状态
+  enum DeviceStatusType {
+    // 设备正常
+    NORMAL = 0;
+  }
+  DeviceStatusType deviceStatus = 13;
+  // 设备型号
+  string model = 14;
+}
+
+message SetDeviceRequest {
+  // 咕咕鸡设备GUID
+  string smartGuid = 1;
+  // LED状态
+  int32 led = 3;
+  // 蜂鸣器状态
+  int32 buz = 4;
+  // 打印速度
+  int64 speed = 5;
+}
+
+message SendMsgRequest {
+  // 咕咕鸡设备GUID
+  string smartGuid = 1;
+  SendMsgRequestContent content = 2;
+}
+
+message SendMsgRequestContent {
+  // 重要纸条
+  bool important = 2;
+  // 纸条ID
+  int64 paperID = 3;
+  // 纸条数据段
+  repeated SendMsgRequestContentContent content = 4;
+}
+
+message SendMsgRequestContentContent {
+  // 类型
+  enum ContentType {
+    // 文本
+    TEXT = 0;
+    // 图片
+    IMAGE = 1;
+    // 图标
+    ICON = 2;
+  }
+  ContentType type = 1;
+  // 字体大小
+  enum FontSizeType {
+    DEFAULT = 0;
+    NORMAL = 1;
+    LARGE = 2;
+  }
+  FontSizeType fontSize = 2;
+  // 加粗
+  bool bold = 3;
+  // 纸条内容
+  oneof content {
+    // 文字或者图片数据
+    bytes text = 5;
+    // 图标ID, 对应图标表
+    int64 iconID = 4;
+  }
+}
+
+service ApiService {
+  // 获取在线设备列表
+  rpc ListOnlineDevices(ListOnlineDevicesRequest) returns (ListOnlineDevicesResponse) {}
+  // 获取在线设备详情
+  rpc DeviceDetail(GenericRequest) returns (DeviceDetailResponse) {}
+  // 踢出设备
+  rpc KickDevice(GenericRequest) returns (GenericResponse) {}
+  // 设置设备参数
+  rpc SetDevice(SetDeviceRequest) returns (GenericResponse) {}
+  // 发送纸条
+  rpc SendMsg(SendMsgRequest) returns (GenericResponse) {}
+}
