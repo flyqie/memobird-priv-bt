@@ -67,10 +67,10 @@ type ApiServiceClient interface {
 	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
 	// 踢出设备
 	KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
-	// 设置设备参数(暂时禁用)
+	// 设置设备参数
 	SetDevice(context.Context, *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 发送纸条
-	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error)
+	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error)
 	// 获取单色位图
 	MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error)
 }
@@ -109,7 +109,7 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(apiServiceSetDeviceMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		sendMsg: connect.NewClient[v1.SendMsgRequest, v1.GenericResponse](
+		sendMsg: connect.NewClient[v1.SendMsgRequest, v1.SendMsgResponse](
 			httpClient,
 			baseURL+ApiServiceSendMsgProcedure,
 			connect.WithSchema(apiServiceSendMsgMethodDescriptor),
@@ -130,7 +130,7 @@ type apiServiceClient struct {
 	deviceDetail      *connect.Client[v1.GenericRequest, v1.DeviceDetailResponse]
 	kickDevice        *connect.Client[v1.GenericRequest, v1.GenericResponse]
 	setDevice         *connect.Client[v1.SetDeviceRequest, v1.GenericResponse]
-	sendMsg           *connect.Client[v1.SendMsgRequest, v1.GenericResponse]
+	sendMsg           *connect.Client[v1.SendMsgRequest, v1.SendMsgResponse]
 	makeMonoBmp       *connect.Client[v1.MakeMonoBmpRequest, v1.MakeMonoBmpResponse]
 }
 
@@ -155,7 +155,7 @@ func (c *apiServiceClient) SetDevice(ctx context.Context, req *connect.Request[v
 }
 
 // SendMsg calls memobird.v1.ApiService.SendMsg.
-func (c *apiServiceClient) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error) {
+func (c *apiServiceClient) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error) {
 	return c.sendMsg.CallUnary(ctx, req)
 }
 
@@ -172,10 +172,10 @@ type ApiServiceHandler interface {
 	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
 	// 踢出设备
 	KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
-	// 设置设备参数(暂时禁用)
+	// 设置设备参数
 	SetDevice(context.Context, *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 发送纸条
-	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error)
+	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error)
 	// 获取单色位图
 	MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error)
 }
@@ -261,7 +261,7 @@ func (UnimplementedApiServiceHandler) SetDevice(context.Context, *connect.Reques
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.SetDevice is not implemented"))
 }
 
-func (UnimplementedApiServiceHandler) SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error) {
+func (UnimplementedApiServiceHandler) SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.SendMsg is not implemented"))
 }
 

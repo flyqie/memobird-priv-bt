@@ -11,6 +11,7 @@ import (
 	"github.com/flyqie/memobird-priv/internal/helper"
 	"github.com/flyqie/memobird-priv/internal/model"
 	"github.com/flyqie/memobird-priv/internal/pkg/log"
+	"github.com/gorilla/websocket"
 	"github.com/sergeymakinen/go-bmp"
 	"golang.org/x/image/draw"
 	"image"
@@ -51,9 +52,22 @@ func (s *ApiServer) DeviceDetail(ctx context.Context, req *connect.Request[v1.Ge
 		resp := &v1.DeviceDetailResponse{}
 		resp.SmartGuid = v.SmartGuid
 		resp.Bssid = v.Bssid
-		resp.Led = int32(v.Led)
-		resp.Buz = int32(v.Buz)
-		resp.Speed = int64(v.Speed)
+		if v.Led == 1 {
+			resp.Led = true
+		}
+		if v.Buz == 1 {
+			resp.Buz = true
+		}
+		switch v.Speed {
+		case 15:
+			resp.Speed = v1.DeviceDetailResponse_SPEED_LIGHT
+		case 16:
+			resp.Speed = v1.DeviceDetailResponse_SPEED_INIT
+		case 17:
+			resp.Speed = v1.DeviceDetailResponse_SPEED_DEFAULT
+		case 20:
+			resp.Speed = v1.DeviceDetailResponse_SPEED_DARK
+		}
 		resp.Ver = strconv.FormatInt(v.Ver, 10)
 		resp.LanguageId = int32(v.LanguageId)
 		resp.Busy = int32(v.Busy)
@@ -61,7 +75,7 @@ func (s *ApiServer) DeviceDetail(ctx context.Context, req *connect.Request[v1.Ge
 		resp.JoinTime = v.JoinTime.Unix()
 		resp.MsgCount = uint64(v.MsgCount.Load())
 		resp.MsgQueueCount = uint64(v.MsgQueueCount.Load())
-		resp.DeviceStatus = v1.DeviceDetailResponse_NORMAL
+		resp.DeviceStatus = v1.DeviceDetailResponse_DEVICE_STATUS_NORMAL
 		resp.Model = v.Model
 		return connect.NewResponse(resp), nil
 	} else {
@@ -88,30 +102,45 @@ func (s *ApiServer) KickDevice(ctx context.Context, req *connect.Request[v1.Gene
 }
 
 func (s *ApiServer) SetDevice(ctx context.Context, req *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error) {
-	/*
-		s.Bird.DeviceMapLock.RLock()
-		defer s.Bird.DeviceMapLock.RUnlock()
-		if v, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
-			if v.WSConn != nil {
-				err := v.WSConn.WriteMessage(websocket.TextMessage, []byte(model.BIRD_MSG_START+"{\"command\":2,\"led\":"+strconv.FormatInt(int64(req.Msg.Led), 10)+",\"buz\":"+strconv.FormatInt(int64(req.Msg.Buz), 10)+",\"speed\":"+strconv.FormatInt(req.Msg.Speed, 10)+"}"+model.BIRD_MSG_END))
-				if err != nil {
-					return nil, helper.WrapConnectErrorDetail(connect.NewError(connect.CodeInternal, errors.New(model.DeviceSendFailed)), &v1.ErrDetail{
-						Message: err.Error(),
-					})
-				}
-			}
-			return connect.NewResponse(&v1.GenericResponse{}), nil
-		} else {
-			return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
-		}
-	*/
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("unimplemented"))
-}
-
-func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.GenericResponse], error) {
 	s.Bird.DeviceMapLock.RLock()
 	defer s.Bird.DeviceMapLock.RUnlock()
 	if v, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
+		if v.WSConn != nil {
+			var _Led = 0
+			var _Buz = 0
+			var _Speed = 17
+			if req.Msg.Led {
+				_Led = 1
+			}
+			if req.Msg.Buz {
+				_Buz = 1
+			}
+			switch req.Msg.Speed {
+			case v1.SetDeviceRequest_SPEED_LIGHT:
+				_Speed = 15
+			case v1.SetDeviceRequest_SPEED_DEFAULT:
+				_Speed = 17
+			case v1.SetDeviceRequest_SPEED_DARK:
+				_Speed = 20
+			}
+			err := v.WSConn.WriteMessage(websocket.TextMessage, []byte(model.BIRD_MSG_START+"{\"command\":2,\"led\":"+strconv.Itoa(_Led)+",\"buz\":"+strconv.Itoa(_Buz)+",\"speed\":"+strconv.Itoa(_Speed)+"}"+model.BIRD_MSG_END))
+			if err != nil {
+				return nil, helper.WrapConnectErrorDetail(connect.NewError(connect.CodeInternal, errors.New(model.DeviceSendFailed)), &v1.ErrDetail{
+					Message: err.Error(),
+				})
+			}
+		}
+		return connect.NewResponse(&v1.GenericResponse{}), nil
+	} else {
+		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+	}
+}
+
+func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error) {
+	s.Bird.DeviceMapLock.RLock()
+	defer s.Bird.DeviceMapLock.RUnlock()
+	if v, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
+		var paperID int64 = 0
 		if v.PaperMessageQueue != nil {
 			var baseTextLen int64 = 0
 			for _, _v := range req.Msg.Content.Content {
@@ -126,14 +155,9 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 					pkgCount++
 				}
 			}
-			var paperID int64
-			if req.Msg.Content.PaperID > 0 {
-				paperID = req.Msg.Content.PaperID
-			} else {
-				paperID = time.Now().Unix()
-			}
 			var papers []*model.BirdPaperMessage
 			var contentNo = 0
+			paperID = time.Now().UnixMilli()
 			for {
 				if contentNo > (len(req.Msg.Content.Content) - 1) {
 					break
@@ -151,16 +175,20 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 					}
 					_v := req.Msg.Content.Content[contentNo]
 					paperMsgContent := model.BirdPaperMessageContent{
-						FontSize: int(_v.FontSize),
-						Bold:     _v.Bold,
+						Bold: _v.Bold,
 					}
-					if _v.Type == v1.SendMsgRequestContentContent_TEXT {
+					if _v.FontSize == v1.SendMsgRequestContentContent_FONTSIZE_NORMAL {
+						paperMsgContent.FontSize = 1
+					} else if _v.FontSize == v1.SendMsgRequestContentContent_FONTSIZE_LARGE {
+						paperMsgContent.FontSize = 2
+					}
+					if _v.Type == v1.SendMsgRequestContentContent_CONTENT_TEXT {
 						paperMsgContent.Type = 1
-					} else if _v.Type == v1.SendMsgRequestContentContent_IMAGE {
+					} else if _v.Type == v1.SendMsgRequestContentContent_CONTENT_IMAGE {
 						paperMsgContent.Type = 2
-					} else if _v.Type == v1.SendMsgRequestContentContent_ICON {
+					} else if _v.Type == v1.SendMsgRequestContentContent_CONTENT_ICON {
 						paperMsgContent.Type = 3
-					} else if _v.Type == v1.SendMsgRequestContentContent_QR {
+					} else if _v.Type == v1.SendMsgRequestContentContent_CONTENT_QR {
 						paperMsgContent.Type = 4
 					} else {
 						continue
@@ -173,6 +201,7 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 					} else {
 						paperMsgContent.Content = string(_v.BaseText)
 					}
+					paperMsgContent.Content += "\n"
 					paperMsgContent.IconID = _v.IconID
 					paperMsg.Content = append(paperMsg.Content, paperMsgContent)
 					if isContentEnd {
@@ -206,7 +235,9 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 				v.MsgQueueCount.Add(1)
 			}
 		}
-		return connect.NewResponse(&v1.GenericResponse{}), nil
+		return connect.NewResponse(&v1.SendMsgResponse{
+			PaperID: paperID,
+		}), nil
 	} else {
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
 	}

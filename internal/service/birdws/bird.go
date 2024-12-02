@@ -272,7 +272,7 @@ func (b *Bird) handlerMessage(device *model.BirdDevice, msg []byte) {
 		}
 
 		if msgData.Command == 2 {
-			// 上报设备LED、蜂鸣器状态
+			// 上报设备LED、蜂鸣器状态、打印浓度
 			device.Led = msgData.Led
 			device.Buz = msgData.Buz
 			device.Speed = msgData.Speed

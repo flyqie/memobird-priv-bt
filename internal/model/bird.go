@@ -28,7 +28,11 @@ type BirdDevice struct {
 	Led int
 	// 蜂鸣器状态
 	Buz int
-	// 打印速度
+	// 打印浓度
+	// 15: 浅
+	// 16: 设备初始化
+	// 17: 适中
+	// 20: 深
 	Speed int
 	// 固件版本
 	Ver int64

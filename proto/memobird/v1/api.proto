@@ -32,12 +32,22 @@ message DeviceDetailResponse {
   string smartGuid = 1;
   // MAC地址
   string bssid = 2;
-  // LED状态
-  int32 led = 3;
-  // 蜂鸣器状态
-  int32 buz = 4;
-  // 打印速度
-  int64 speed = 5;
+  // LED
+  bool led = 3;
+  // 蜂鸣器
+  bool buz = 4;
+  // 打印浓度
+  enum SpeedType {
+    // 适中
+    SPEED_DEFAULT = 0;
+    // 浅
+    SPEED_LIGHT = 1;
+    // 深
+    SPEED_DARK = 2;
+    // 设备初始化的默认浓度
+    SPEED_INIT = 3;
+  }
+  SpeedType speed = 5;
   // 固件版本
   string ver = 6;
   // 语言ID
@@ -55,7 +65,7 @@ message DeviceDetailResponse {
   // 设备状态
   enum DeviceStatusType {
     // 设备正常
-    NORMAL = 0;
+    DEVICE_STATUS_NORMAL = 0;
   }
   DeviceStatusType deviceStatus = 13;
   // 设备型号
@@ -65,25 +75,37 @@ message DeviceDetailResponse {
 message SetDeviceRequest {
   // 咕咕鸡设备GUID
   string smartGuid = 1;
-  // LED状态
-  int32 led = 3;
-  // 蜂鸣器状态
-  int32 buz = 4;
-  // 打印速度
-  int64 speed = 5;
+  // LED
+  bool led = 2;
+  // 蜂鸣器
+  bool buz = 3;
+  // 打印浓度
+  enum SpeedType {
+    // 适中
+    SPEED_DEFAULT = 0;
+    // 浅
+    SPEED_LIGHT = 1;
+    // 深
+    SPEED_DARK = 2;
+  }
+  SpeedType speed = 4;
 }
 
 message SendMsgRequest {
   // 咕咕鸡设备GUID
   string smartGuid = 1;
+  // 纸条内容
   SendMsgRequestContent content = 2;
+}
+
+message SendMsgResponse {
+  // 纸条ID
+  int64 paperID = 1;
 }
 
 message SendMsgRequestContent {
   // 重要纸条
   bool important = 2;
-  // 纸条ID
-  int64 paperID = 3;
   // 纸条数据段
   repeated SendMsgRequestContentContent content = 4;
 }
@@ -92,20 +114,19 @@ message SendMsgRequestContentContent {
   // 类型
   enum ContentType {
     // 文本
-    TEXT = 0;
+    CONTENT_TEXT = 0;
     // 图片
-    IMAGE = 1;
+    CONTENT_IMAGE = 1;
     // 图标
-    ICON = 2;
+    CONTENT_ICON = 2;
     // 二维码
-    QR = 3;
+    CONTENT_QR = 3;
   }
   ContentType type = 1;
   // 字体大小
   enum FontSizeType {
-    DEFAULT = 0;
-    NORMAL = 1;
-    LARGE = 2;
+    FONTSIZE_NORMAL = 0;
+    FONTSIZE_LARGE = 1;
   }
   FontSizeType fontSize = 2;
   // 加粗
@@ -118,10 +139,12 @@ message SendMsgRequestContentContent {
 }
 
 message MakeMonoBmpRequest {
+  // 原始图片数据(支持PNG、JPEG)
   bytes image = 1;
 }
 
 message MakeMonoBmpResponse {
+  // 单色位图数据
   bytes bmp = 1;
 }
 
@@ -132,10 +155,10 @@ service ApiService {
   rpc DeviceDetail(GenericRequest) returns (DeviceDetailResponse) {}
   // 踢出设备
   rpc KickDevice(GenericRequest) returns (GenericResponse) {}
-  // 设置设备参数(暂时禁用)
+  // 设置设备参数
   rpc SetDevice(SetDeviceRequest) returns (GenericResponse) {}
   // 发送纸条
-  rpc SendMsg(SendMsgRequest) returns (GenericResponse) {}
+  rpc SendMsg(SendMsgRequest) returns (SendMsgResponse) {}
 
   // 获取单色位图
   rpc MakeMonoBmp(MakeMonoBmpRequest) returns (MakeMonoBmpResponse) {}
