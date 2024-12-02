@@ -283,6 +283,9 @@ func (b *Bird) handlerMessage(device *model.BirdDevice, msg []byte) {
 		} else if msgData.Command == 4 {
 			// 上报旅程信息
 			device.Trip = msgData.Trip
+		} else if msgData.Command == 6 {
+			// 上报用户双击按键打印设备信息纸条
+			// {"command":6,"result":1}
 		} else if msgData.Command == 88 {
 			// 上报打印设备是否忙碌
 			device.Busy = msgData.Busy
