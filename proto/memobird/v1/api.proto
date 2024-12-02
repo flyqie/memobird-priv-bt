@@ -105,9 +105,9 @@ message SendMsgResponse {
 
 message SendMsgRequestContent {
   // 重要纸条
-  bool important = 2;
+  bool important = 1;
   // 纸条数据段
-  repeated SendMsgRequestContentContent content = 4;
+  repeated SendMsgRequestContentContent content = 2;
 }
 
 message SendMsgRequestContentContent {
@@ -131,7 +131,6 @@ message SendMsgRequestContentContent {
   FontSizeType fontSize = 2;
   // 加粗
   bool bold = 3;
-  // 纸条内容
   // 图标ID, 对应图标表
   int64 iconID = 4;
   // 文字或者图片数据
