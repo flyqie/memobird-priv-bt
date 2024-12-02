@@ -201,7 +201,9 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 					} else {
 						paperMsgContent.Content = string(_v.BaseText)
 					}
-					paperMsgContent.Content += "\n"
+					if paperMsgContent.Type == 1 && !_v.NoWrap {
+						paperMsgContent.Content += "\n"
+					}
 					paperMsgContent.IconID = _v.IconID
 					paperMsg.Content = append(paperMsg.Content, paperMsgContent)
 					if isContentEnd {

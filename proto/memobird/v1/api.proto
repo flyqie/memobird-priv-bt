@@ -135,6 +135,8 @@ message SendMsgRequestContentContent {
   int64 iconID = 4;
   // 文字或者图片数据
   bytes baseText = 5;
+  // 禁止添加换行符
+  bool noWrap = 6;
 }
 
 message MakeMonoBmpRequest {
