@@ -241,6 +241,9 @@ func (b *Bird) makeMsg(device *model.BirdDevice, msg *model.BirdPaperMessage) ([
 			// 图标
 			s2cPMCTL.PrintType = 4
 			s2cPMCTL.IconID = v.IconID
+		} else if v.Type == 4 {
+			// QR
+			s2cPMCTL.PrintType = 3
 		} else {
 			return nil, errors.New("unknown content type")
 		}

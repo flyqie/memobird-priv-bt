@@ -60,10 +60,10 @@ func main() {
 		SSID:     ssid,
 		Security: 7,
 		Channel:  0,
-		// TODO: UTF8
+		// 未来应该实现传递UTF8格式?
 		SSID2: base64.StdEncoding.EncodeToString([]byte(ssid)),
 		Key2:  base64.StdEncoding.EncodeToString([]byte(passwd)),
-		// TODO: GBK
+		// 未来应该实现传递GBK格式?
 		SSID3:  base64.StdEncoding.EncodeToString([]byte(ssid)),
 		Key3:   base64.StdEncoding.EncodeToString([]byte(passwd)),
 		Key:    passwd,

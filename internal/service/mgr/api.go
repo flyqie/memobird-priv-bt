@@ -160,6 +160,10 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 						paperMsgContent.Type = 2
 					} else if _v.Type == v1.SendMsgRequestContentContent_ICON {
 						paperMsgContent.Type = 3
+					} else if _v.Type == v1.SendMsgRequestContentContent_QR {
+						paperMsgContent.Type = 4
+					} else {
+						continue
 					}
 					var isContentEnd = true
 					if len(_v.BaseText) > 25600 {

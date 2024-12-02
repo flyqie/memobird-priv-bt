@@ -80,6 +80,7 @@ type BirdPaperMessageContent struct {
 	// 文字: 1
 	// 图片: 2
 	// 图标: 3
+	// QR: 4
 	Type int
 	// 字体大小
 	// FONT_BOLD_FALSE = 0;
