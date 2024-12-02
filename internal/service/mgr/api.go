@@ -12,9 +12,9 @@ import (
 	"github.com/flyqie/memobird-priv/internal/model"
 	"github.com/flyqie/memobird-priv/internal/pkg/log"
 	"github.com/sergeymakinen/go-bmp"
+	"golang.org/x/image/draw"
 	"image"
 	"image/color"
-	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -217,14 +217,26 @@ func (s *ApiServer) MakeMonoBmp(ctx context.Context, req *connect.Request[v1.Mak
 		}
 
 		bounds := srcImg.Bounds()
+		var scaledImg image.Image
+		const targetWidth = 384
+		if bounds.Dx() > targetWidth {
+			scaleFactor := float64(targetWidth) / float64(bounds.Dx())
+			targetHeight := int(float64(bounds.Dy()) * scaleFactor)
+			resized := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
+			draw.CatmullRom.Scale(resized, resized.Bounds(), srcImg, bounds, draw.Over, nil)
+			scaledImg = resized
+		} else {
+			scaledImg = srcImg
+		}
+
+		newBounds := scaledImg.Bounds()
 		palette := []color.Color{color.White, color.Black}
-		palettedImg := image.NewPaletted(bounds, palette)
+		palettedImg := image.NewPaletted(newBounds, palette)
+		draw.Draw(palettedImg, newBounds, scaledImg, newBounds.Min, draw.Src)
 
-		draw.Draw(palettedImg, bounds, srcImg, bounds.Min, draw.Src)
-
-		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			for x := bounds.Min.X; x < bounds.Max.X; x++ {
-				c := srcImg.At(x, y)
+		for y := newBounds.Min.Y; y < newBounds.Max.Y; y++ {
+			for x := newBounds.Min.X; x < newBounds.Max.X; x++ {
+				c := scaledImg.At(x, y)
 				grayColor := color.GrayModel.Convert(c).(color.Gray)
 				if grayColor.Y > 128 {
 					palettedImg.Set(x, y, color.White)
