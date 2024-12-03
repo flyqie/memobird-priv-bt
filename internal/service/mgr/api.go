@@ -77,6 +77,9 @@ func (s *ApiServer) DeviceDetail(ctx context.Context, req *connect.Request[v1.Ge
 		resp.MsgQueueCount = uint64(v.MsgQueueCount.Load())
 		resp.DeviceStatus = v1.DeviceDetailResponse_DEVICE_STATUS_NORMAL
 		resp.Model = v.Model
+		if v.PaperMessageCallbackQueue != nil {
+			resp.CbCheck = true
+		}
 		return connect.NewResponse(resp), nil
 	} else {
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))

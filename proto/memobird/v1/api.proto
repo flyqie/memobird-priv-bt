@@ -70,6 +70,8 @@ message DeviceDetailResponse {
   DeviceStatusType deviceStatus = 13;
   // 设备型号
   string model = 14;
+  // 消息回调监控
+  bool cbCheck = 15;
 }
 
 message SetDeviceRequest {
