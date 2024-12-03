@@ -10,6 +10,7 @@ import (
 	"github.com/flyqie/memobird-priv/internal/pkg/log"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -61,7 +62,7 @@ func (b *Bird) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	wsLog.Debugf("New WebSocket connection established")
 	// 10分钟鉴权超时
-	authTimeoutCtx, authTimeoutCancel := context.WithTimeout(r.Context(), 600*time.Second)
+	authTimeoutCtx, authTimeoutCancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	go b.authTimeoutHandler(conn, authTimeoutCtx)
 	tempDevice := &model.BirdDevice{
 		WSConn: conn,
@@ -76,6 +77,19 @@ func (b *Bird) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	tempDevice.PaperMessageQueue = make(chan *model.BirdPaperMessage, 10000)
 	tempDevice.PaperMessageQueueCtx, tempDevice.PaperMessageQueueCancel = context.WithCancel(context.Background())
 	defer tempDevice.PaperMessageQueueCancel()
+	if os.Getenv("MESSAGE_CB_CHECK") == "ENABLE" {
+		tempDevice.PaperMessageCallbackQueue = make(chan string, 10000)
+		defer func() {
+			defer func() {
+				if err := recover(); err != nil {
+					wsLog.WithError(err.(error)).Errorf("PaperMessageQueueClose")
+				}
+			}()
+			close(tempDevice.PaperMessageCallbackQueue)
+		}()
+	} else {
+		tempDevice.PaperMessageCallbackQueue = nil
+	}
 	var oldDevice *model.BirdDevice
 	b.bird.DeviceMapLock.Lock()
 	if _, ok := b.bird.DeviceMap[tempDevice.SmartGuid]; ok {
@@ -205,6 +219,16 @@ msgHandler:
 				wsLog.WithField("smartGuid", device.SmartGuid).WithError(err).Errorf("Write")
 				break msgHandler
 			}
+			if device.PaperMessageCallbackQueue != nil {
+				select {
+				case cbMsg := <-device.PaperMessageCallbackQueue:
+					// 有回调
+					wsLog.WithField("smartGuid", device.SmartGuid).WithField("cbMsg", cbMsg).Debugf("Paper Callback")
+				case <-time.After(10 * time.Minute):
+					// 10分钟没收到callback就超时
+					wsLog.WithField("smartGuid", device.SmartGuid).Debugf("Paper Callback Timeout")
+				}
+			}
 		}
 	}
 	_ = device.WSConn.Close()
@@ -280,6 +304,16 @@ func (b *Bird) handlerMessage(device *model.BirdDevice, msg []byte) {
 		} else if msgData.Command == 3 {
 			// 上报纸条打印状态
 			// {"command":3,"msgType":1,"printTableID":63471327,"packageCount":1,"packageNo":1,"result":1}
+			if device.PaperMessageCallbackQueue != nil {
+				go func(cbChan chan string, cbMsg string) {
+					defer func() {
+						if err := recover(); err != nil {
+							wsLog.WithField("smartGuid", device.SmartGuid).WithError(err.(error)).Errorf("Paper Callback Send")
+						}
+					}()
+					cbChan <- cbMsg
+				}(device.PaperMessageCallbackQueue, msgJson)
+			}
 		} else if msgData.Command == 4 {
 			// 上报旅程信息
 			device.Trip = msgData.Trip

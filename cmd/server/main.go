@@ -43,6 +43,9 @@ func main() {
 	if ip = os.Getenv("PRIV_SERVER_IP"); ip == "" {
 		mainLog.Fatalf("PRIV_SERVER_IP has not been set!")
 	}
+	if os.Getenv("MESSAGE_CB_CHECK") == "ENABLE" {
+		mainLog.Printf("MESSAGE_CB_CHECK ENABLE!")
+	}
 	bird := &model.Bird{
 		DeviceMap: make(map[string]*model.BirdDevice),
 	}

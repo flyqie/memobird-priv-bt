@@ -160,6 +160,8 @@ service ApiService {
   rpc SetDevice(SetDeviceRequest) returns (GenericResponse) {}
   // 发送纸条
   rpc SendMsg(SendMsgRequest) returns (SendMsgResponse) {}
+  // 强制解锁设备消息回调进程
+  rpc UnlockDeviceMessageCallback(GenericRequest) returns (GenericResponse) {}
 
   // 获取单色位图
   rpc MakeMonoBmp(MakeMonoBmpRequest) returns (MakeMonoBmpResponse) {}

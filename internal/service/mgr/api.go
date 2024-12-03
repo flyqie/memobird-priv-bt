@@ -245,6 +245,19 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 	}
 }
 
+func (s *ApiServer) UnlockDeviceMessageCallback(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error) {
+	s.Bird.DeviceMapLock.RLock()
+	defer s.Bird.DeviceMapLock.RUnlock()
+	if v, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
+		if v.PaperMessageCallbackQueue != nil {
+			v.PaperMessageCallbackQueue <- "RPC_UnlockDeviceMessageCallback"
+		}
+		return connect.NewResponse(&v1.GenericResponse{}), nil
+	} else {
+		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+	}
+}
+
 func (s *ApiServer) MakeMonoBmp(ctx context.Context, req *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error) {
 	makeBmpFunc := func(input []byte) ([]byte, error) {
 		reader := bytes.NewReader(input)

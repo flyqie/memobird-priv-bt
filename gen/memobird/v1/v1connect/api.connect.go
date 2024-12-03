@@ -44,19 +44,23 @@ const (
 	ApiServiceSetDeviceProcedure = "/memobird.v1.ApiService/SetDevice"
 	// ApiServiceSendMsgProcedure is the fully-qualified name of the ApiService's SendMsg RPC.
 	ApiServiceSendMsgProcedure = "/memobird.v1.ApiService/SendMsg"
+	// ApiServiceUnlockDeviceMessageCallbackProcedure is the fully-qualified name of the ApiService's
+	// UnlockDeviceMessageCallback RPC.
+	ApiServiceUnlockDeviceMessageCallbackProcedure = "/memobird.v1.ApiService/UnlockDeviceMessageCallback"
 	// ApiServiceMakeMonoBmpProcedure is the fully-qualified name of the ApiService's MakeMonoBmp RPC.
 	ApiServiceMakeMonoBmpProcedure = "/memobird.v1.ApiService/MakeMonoBmp"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	apiServiceServiceDescriptor                 = v1.File_memobird_v1_api_proto.Services().ByName("ApiService")
-	apiServiceListOnlineDevicesMethodDescriptor = apiServiceServiceDescriptor.Methods().ByName("ListOnlineDevices")
-	apiServiceDeviceDetailMethodDescriptor      = apiServiceServiceDescriptor.Methods().ByName("DeviceDetail")
-	apiServiceKickDeviceMethodDescriptor        = apiServiceServiceDescriptor.Methods().ByName("KickDevice")
-	apiServiceSetDeviceMethodDescriptor         = apiServiceServiceDescriptor.Methods().ByName("SetDevice")
-	apiServiceSendMsgMethodDescriptor           = apiServiceServiceDescriptor.Methods().ByName("SendMsg")
-	apiServiceMakeMonoBmpMethodDescriptor       = apiServiceServiceDescriptor.Methods().ByName("MakeMonoBmp")
+	apiServiceServiceDescriptor                           = v1.File_memobird_v1_api_proto.Services().ByName("ApiService")
+	apiServiceListOnlineDevicesMethodDescriptor           = apiServiceServiceDescriptor.Methods().ByName("ListOnlineDevices")
+	apiServiceDeviceDetailMethodDescriptor                = apiServiceServiceDescriptor.Methods().ByName("DeviceDetail")
+	apiServiceKickDeviceMethodDescriptor                  = apiServiceServiceDescriptor.Methods().ByName("KickDevice")
+	apiServiceSetDeviceMethodDescriptor                   = apiServiceServiceDescriptor.Methods().ByName("SetDevice")
+	apiServiceSendMsgMethodDescriptor                     = apiServiceServiceDescriptor.Methods().ByName("SendMsg")
+	apiServiceUnlockDeviceMessageCallbackMethodDescriptor = apiServiceServiceDescriptor.Methods().ByName("UnlockDeviceMessageCallback")
+	apiServiceMakeMonoBmpMethodDescriptor                 = apiServiceServiceDescriptor.Methods().ByName("MakeMonoBmp")
 )
 
 // ApiServiceClient is a client for the memobird.v1.ApiService service.
@@ -71,6 +75,8 @@ type ApiServiceClient interface {
 	SetDevice(context.Context, *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 发送纸条
 	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error)
+	// 强制解锁设备消息回调进程
+	UnlockDeviceMessageCallback(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 获取单色位图
 	MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error)
 }
@@ -115,6 +121,12 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(apiServiceSendMsgMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		unlockDeviceMessageCallback: connect.NewClient[v1.GenericRequest, v1.GenericResponse](
+			httpClient,
+			baseURL+ApiServiceUnlockDeviceMessageCallbackProcedure,
+			connect.WithSchema(apiServiceUnlockDeviceMessageCallbackMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		makeMonoBmp: connect.NewClient[v1.MakeMonoBmpRequest, v1.MakeMonoBmpResponse](
 			httpClient,
 			baseURL+ApiServiceMakeMonoBmpProcedure,
@@ -126,12 +138,13 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 
 // apiServiceClient implements ApiServiceClient.
 type apiServiceClient struct {
-	listOnlineDevices *connect.Client[v1.ListOnlineDevicesRequest, v1.ListOnlineDevicesResponse]
-	deviceDetail      *connect.Client[v1.GenericRequest, v1.DeviceDetailResponse]
-	kickDevice        *connect.Client[v1.GenericRequest, v1.GenericResponse]
-	setDevice         *connect.Client[v1.SetDeviceRequest, v1.GenericResponse]
-	sendMsg           *connect.Client[v1.SendMsgRequest, v1.SendMsgResponse]
-	makeMonoBmp       *connect.Client[v1.MakeMonoBmpRequest, v1.MakeMonoBmpResponse]
+	listOnlineDevices           *connect.Client[v1.ListOnlineDevicesRequest, v1.ListOnlineDevicesResponse]
+	deviceDetail                *connect.Client[v1.GenericRequest, v1.DeviceDetailResponse]
+	kickDevice                  *connect.Client[v1.GenericRequest, v1.GenericResponse]
+	setDevice                   *connect.Client[v1.SetDeviceRequest, v1.GenericResponse]
+	sendMsg                     *connect.Client[v1.SendMsgRequest, v1.SendMsgResponse]
+	unlockDeviceMessageCallback *connect.Client[v1.GenericRequest, v1.GenericResponse]
+	makeMonoBmp                 *connect.Client[v1.MakeMonoBmpRequest, v1.MakeMonoBmpResponse]
 }
 
 // ListOnlineDevices calls memobird.v1.ApiService.ListOnlineDevices.
@@ -159,6 +172,11 @@ func (c *apiServiceClient) SendMsg(ctx context.Context, req *connect.Request[v1.
 	return c.sendMsg.CallUnary(ctx, req)
 }
 
+// UnlockDeviceMessageCallback calls memobird.v1.ApiService.UnlockDeviceMessageCallback.
+func (c *apiServiceClient) UnlockDeviceMessageCallback(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error) {
+	return c.unlockDeviceMessageCallback.CallUnary(ctx, req)
+}
+
 // MakeMonoBmp calls memobird.v1.ApiService.MakeMonoBmp.
 func (c *apiServiceClient) MakeMonoBmp(ctx context.Context, req *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error) {
 	return c.makeMonoBmp.CallUnary(ctx, req)
@@ -176,6 +194,8 @@ type ApiServiceHandler interface {
 	SetDevice(context.Context, *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 发送纸条
 	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error)
+	// 强制解锁设备消息回调进程
+	UnlockDeviceMessageCallback(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 获取单色位图
 	MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error)
 }
@@ -216,6 +236,12 @@ func NewApiServiceHandler(svc ApiServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(apiServiceSendMsgMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	apiServiceUnlockDeviceMessageCallbackHandler := connect.NewUnaryHandler(
+		ApiServiceUnlockDeviceMessageCallbackProcedure,
+		svc.UnlockDeviceMessageCallback,
+		connect.WithSchema(apiServiceUnlockDeviceMessageCallbackMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	apiServiceMakeMonoBmpHandler := connect.NewUnaryHandler(
 		ApiServiceMakeMonoBmpProcedure,
 		svc.MakeMonoBmp,
@@ -234,6 +260,8 @@ func NewApiServiceHandler(svc ApiServiceHandler, opts ...connect.HandlerOption) 
 			apiServiceSetDeviceHandler.ServeHTTP(w, r)
 		case ApiServiceSendMsgProcedure:
 			apiServiceSendMsgHandler.ServeHTTP(w, r)
+		case ApiServiceUnlockDeviceMessageCallbackProcedure:
+			apiServiceUnlockDeviceMessageCallbackHandler.ServeHTTP(w, r)
 		case ApiServiceMakeMonoBmpProcedure:
 			apiServiceMakeMonoBmpHandler.ServeHTTP(w, r)
 		default:
@@ -263,6 +291,10 @@ func (UnimplementedApiServiceHandler) SetDevice(context.Context, *connect.Reques
 
 func (UnimplementedApiServiceHandler) SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.SendMsg is not implemented"))
+}
+
+func (UnimplementedApiServiceHandler) UnlockDeviceMessageCallback(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.UnlockDeviceMessageCallback is not implemented"))
 }
 
 func (UnimplementedApiServiceHandler) MakeMonoBmp(context.Context, *connect.Request[v1.MakeMonoBmpRequest]) (*connect.Response[v1.MakeMonoBmpResponse], error) {

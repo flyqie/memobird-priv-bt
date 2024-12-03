@@ -59,6 +59,8 @@ type BirdDevice struct {
 	PaperMessageQueueCancel context.CancelFunc
 	// 消息队列分包并发锁
 	PaperMessageQueuePkgLock sync.RWMutex
+	// 消息回调队列
+	PaperMessageCallbackQueue chan string
 
 	// Websocket连接
 	WSConn *websocket.Conn
