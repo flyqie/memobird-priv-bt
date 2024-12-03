@@ -848,7 +848,7 @@ type SendMsgRequestContent struct {
 
 	// 重要纸条
 	Important bool `protobuf:"varint,1,opt,name=important,proto3" json:"important,omitempty"`
-	// 纸条数据段
+	// 纸条数据段, 11个以上可能打印不了
 	Content []*SendMsgRequestContentContent `protobuf:"bytes,2,rep,name=content,proto3" json:"content,omitempty"`
 }
 

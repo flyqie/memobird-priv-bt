@@ -106,7 +106,7 @@ message SendMsgResponse {
 message SendMsgRequestContent {
   // 重要纸条
   bool important = 1;
-  // 纸条数据段
+  // 纸条数据段, 11个以上可能打印不了
   repeated SendMsgRequestContentContent content = 2;
 }
 
