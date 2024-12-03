@@ -133,7 +133,7 @@ message SendMsgRequestContentContent {
   bool bold = 3;
   // 图标ID, 对应图标表
   int64 iconID = 4;
-  // 文字或者图片数据
+  // 文字或者图片数据, 汉字必须要GBK编码, 图片必须是单色位图, 可以通过MakeMonoBmp接口获取
   bytes baseText = 5;
   // 禁止添加换行符
   bool noWrap = 6;

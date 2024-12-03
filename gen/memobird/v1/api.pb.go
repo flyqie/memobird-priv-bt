@@ -909,7 +909,7 @@ type SendMsgRequestContentContent struct {
 	Bold bool `protobuf:"varint,3,opt,name=bold,proto3" json:"bold,omitempty"`
 	// 图标ID, 对应图标表
 	IconID int64 `protobuf:"varint,4,opt,name=iconID,proto3" json:"iconID,omitempty"`
-	// 文字或者图片数据
+	// 文字或者图片数据, 汉字必须要GBK编码, 图片必须是单色位图, 可以通过MakeMonoBmp接口获取
 	BaseText []byte `protobuf:"bytes,5,opt,name=baseText,proto3" json:"baseText,omitempty"`
 	// 禁止添加换行符
 	NoWrap bool `protobuf:"varint,6,opt,name=noWrap,proto3" json:"noWrap,omitempty"`
