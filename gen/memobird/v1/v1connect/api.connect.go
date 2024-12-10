@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/flyqie/memobird-priv/gen/memobird/v1"
+	v1 "github.com/flyqie/memobird-priv-bt/gen/memobird/v1"
 	http "net/http"
 	strings "strings"
 )
@@ -38,6 +38,9 @@ const (
 	ApiServiceListOnlineDevicesProcedure = "/memobird.v1.ApiService/ListOnlineDevices"
 	// ApiServiceDeviceDetailProcedure is the fully-qualified name of the ApiService's DeviceDetail RPC.
 	ApiServiceDeviceDetailProcedure = "/memobird.v1.ApiService/DeviceDetail"
+	// ApiServiceConnectDeviceProcedure is the fully-qualified name of the ApiService's ConnectDevice
+	// RPC.
+	ApiServiceConnectDeviceProcedure = "/memobird.v1.ApiService/ConnectDevice"
 	// ApiServiceKickDeviceProcedure is the fully-qualified name of the ApiService's KickDevice RPC.
 	ApiServiceKickDeviceProcedure = "/memobird.v1.ApiService/KickDevice"
 	// ApiServiceSetDeviceProcedure is the fully-qualified name of the ApiService's SetDevice RPC.
@@ -56,6 +59,7 @@ var (
 	apiServiceServiceDescriptor                           = v1.File_memobird_v1_api_proto.Services().ByName("ApiService")
 	apiServiceListOnlineDevicesMethodDescriptor           = apiServiceServiceDescriptor.Methods().ByName("ListOnlineDevices")
 	apiServiceDeviceDetailMethodDescriptor                = apiServiceServiceDescriptor.Methods().ByName("DeviceDetail")
+	apiServiceConnectDeviceMethodDescriptor               = apiServiceServiceDescriptor.Methods().ByName("ConnectDevice")
 	apiServiceKickDeviceMethodDescriptor                  = apiServiceServiceDescriptor.Methods().ByName("KickDevice")
 	apiServiceSetDeviceMethodDescriptor                   = apiServiceServiceDescriptor.Methods().ByName("SetDevice")
 	apiServiceSendMsgMethodDescriptor                     = apiServiceServiceDescriptor.Methods().ByName("SendMsg")
@@ -69,6 +73,8 @@ type ApiServiceClient interface {
 	ListOnlineDevices(context.Context, *connect.Request[v1.ListOnlineDevicesRequest]) (*connect.Response[v1.ListOnlineDevicesResponse], error)
 	// 获取在线设备详情
 	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
+	// 连接设备
+	ConnectDevice(context.Context, *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 踢出设备
 	KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 设置设备参数
@@ -101,6 +107,12 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			httpClient,
 			baseURL+ApiServiceDeviceDetailProcedure,
 			connect.WithSchema(apiServiceDeviceDetailMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		connectDevice: connect.NewClient[v1.ConnectDeviceRequest, v1.GenericResponse](
+			httpClient,
+			baseURL+ApiServiceConnectDeviceProcedure,
+			connect.WithSchema(apiServiceConnectDeviceMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		kickDevice: connect.NewClient[v1.GenericRequest, v1.GenericResponse](
@@ -140,6 +152,7 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 type apiServiceClient struct {
 	listOnlineDevices           *connect.Client[v1.ListOnlineDevicesRequest, v1.ListOnlineDevicesResponse]
 	deviceDetail                *connect.Client[v1.GenericRequest, v1.DeviceDetailResponse]
+	connectDevice               *connect.Client[v1.ConnectDeviceRequest, v1.GenericResponse]
 	kickDevice                  *connect.Client[v1.GenericRequest, v1.GenericResponse]
 	setDevice                   *connect.Client[v1.SetDeviceRequest, v1.GenericResponse]
 	sendMsg                     *connect.Client[v1.SendMsgRequest, v1.SendMsgResponse]
@@ -155,6 +168,11 @@ func (c *apiServiceClient) ListOnlineDevices(ctx context.Context, req *connect.R
 // DeviceDetail calls memobird.v1.ApiService.DeviceDetail.
 func (c *apiServiceClient) DeviceDetail(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
 	return c.deviceDetail.CallUnary(ctx, req)
+}
+
+// ConnectDevice calls memobird.v1.ApiService.ConnectDevice.
+func (c *apiServiceClient) ConnectDevice(ctx context.Context, req *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error) {
+	return c.connectDevice.CallUnary(ctx, req)
 }
 
 // KickDevice calls memobird.v1.ApiService.KickDevice.
@@ -188,6 +206,8 @@ type ApiServiceHandler interface {
 	ListOnlineDevices(context.Context, *connect.Request[v1.ListOnlineDevicesRequest]) (*connect.Response[v1.ListOnlineDevicesResponse], error)
 	// 获取在线设备详情
 	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
+	// 连接设备
+	ConnectDevice(context.Context, *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 踢出设备
 	KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 设置设备参数
@@ -216,6 +236,12 @@ func NewApiServiceHandler(svc ApiServiceHandler, opts ...connect.HandlerOption) 
 		ApiServiceDeviceDetailProcedure,
 		svc.DeviceDetail,
 		connect.WithSchema(apiServiceDeviceDetailMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	apiServiceConnectDeviceHandler := connect.NewUnaryHandler(
+		ApiServiceConnectDeviceProcedure,
+		svc.ConnectDevice,
+		connect.WithSchema(apiServiceConnectDeviceMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	apiServiceKickDeviceHandler := connect.NewUnaryHandler(
@@ -254,6 +280,8 @@ func NewApiServiceHandler(svc ApiServiceHandler, opts ...connect.HandlerOption) 
 			apiServiceListOnlineDevicesHandler.ServeHTTP(w, r)
 		case ApiServiceDeviceDetailProcedure:
 			apiServiceDeviceDetailHandler.ServeHTTP(w, r)
+		case ApiServiceConnectDeviceProcedure:
+			apiServiceConnectDeviceHandler.ServeHTTP(w, r)
 		case ApiServiceKickDeviceProcedure:
 			apiServiceKickDeviceHandler.ServeHTTP(w, r)
 		case ApiServiceSetDeviceProcedure:
@@ -279,6 +307,10 @@ func (UnimplementedApiServiceHandler) ListOnlineDevices(context.Context, *connec
 
 func (UnimplementedApiServiceHandler) DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.DeviceDetail is not implemented"))
+}
+
+func (UnimplementedApiServiceHandler) ConnectDevice(context.Context, *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.ConnectDevice is not implemented"))
 }
 
 func (UnimplementedApiServiceHandler) KickDevice(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error) {

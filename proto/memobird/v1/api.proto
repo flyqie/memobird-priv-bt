@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package memobird.v1;
 
-option go_package = "github.com/flyqie/memobird-priv/gen/memobird/v1;v1";
+option go_package = "github.com/flyqie/memobird-priv-bt/gen/memobird/v1;v1";
 
 message ErrDetail {
   // 错误信息
@@ -34,63 +34,91 @@ message DeviceDetailResponse {
   string bssid = 2;
   // LED
   bool led = 3;
-  // 蜂鸣器
-  bool buz = 4;
   // 打印浓度
-  enum SpeedType {
+  enum DeepType {
     // 适中
-    SPEED_DEFAULT = 0;
+    DEEP_DEFAULT = 0;
     // 浅
-    SPEED_LIGHT = 1;
+    DEEP_LIGHT = 1;
     // 深
-    SPEED_DARK = 2;
-    // 设备初始化的默认浓度
-    SPEED_INIT = 3;
+    DEEP_DARK = 2;
   }
-  SpeedType speed = 5;
+  DeepType deep = 4;
   // 固件版本
-  string ver = 6;
-  // 语言ID
-  int32 languageId = 7;
-  // 设备忙碌状态
-  int32 busy = 8;
-  // 旅程长度信息
-  int64 trip = 9;
-  // 设备加入时间
-  int64 joinTime = 10;
-  // 已发送消息数量
-  uint64 msgCount = 11;
-  // 队列消息数量
-  uint64 msgQueueCount = 12;
+  string ver = 5;
+  // 电量
+  int32 elec = 6;
   // 设备状态
   enum DeviceStatusType {
     // 设备正常
     DEVICE_STATUS_NORMAL = 0;
+    // 设备连接中
+    DEVICE_STATUS_CONNECTING = 1;
   }
-  DeviceStatusType deviceStatus = 13;
+  DeviceStatusType deviceStatus = 7;
+  // 自动关机
+  enum AutoShutdownType {
+    // 10分钟
+    AUTO_SHUTDOWN_TIME_10 = 0;
+    // 30分钟
+    AUTO_SHUTDOWN_TIME_30 = 1;
+    // 1小时
+    AUTO_SHUTDOWN_TIME_60 = 2;
+    // 2小时
+    AUTO_SHUTDOWN_TIME_120 = 3;
+    // 3小时
+    AUTO_SHUTDOWN_TIME_180 = 4;
+    // 4小时
+    AUTO_SHUTDOWN_TIME_240 = 5;
+  }
+  AutoShutdownType autoShutdown = 8;
+  // 设备加入时间
+  int64 joinTime = 9;
+  // 已发送消息数量
+  uint64 msgCount = 10;
+  // 队列消息数量
+  uint64 msgQueueCount = 11;
   // 设备型号
-  string model = 14;
+  string model = 12;
   // 消息回调监控
-  bool cbCheck = 15;
+  bool cbCheck = 13;
 }
 
 message SetDeviceRequest {
   // 咕咕鸡设备GUID
   string smartGuid = 1;
-  // LED
-  bool led = 2;
-  // 蜂鸣器
-  bool buz = 3;
   // 打印浓度
-  enum SpeedType {
+  enum DeepType {
     // 适中
-    SPEED_DEFAULT = 0;
+    DEEP_DEFAULT = 0;
     // 浅
-    SPEED_LIGHT = 1;
+    DEEP_LIGHT = 1;
     // 深
-    SPEED_DARK = 2;
+    DEEP_DARK = 2;
   }
-  SpeedType speed = 4;
+  // 自动关机
+  enum AutoShutdownType {
+    // 10分钟
+    AUTO_SHUTDOWN_TIME_10 = 0;
+    // 30分钟
+    AUTO_SHUTDOWN_TIME_30 = 1;
+    // 1小时
+    AUTO_SHUTDOWN_TIME_60 = 2;
+    // 2小时
+    AUTO_SHUTDOWN_TIME_120 = 3;
+    // 3小时
+    AUTO_SHUTDOWN_TIME_180 = 4;
+    // 4小时
+    AUTO_SHUTDOWN_TIME_240 = 5;
+  }
+  oneof setting {
+    // LED
+    bool led = 2;
+    // 打印浓度
+    DeepType deep = 4;
+    // 自动关机
+    AutoShutdownType autoShutdown = 8;
+  }
 }
 
 message SendMsgRequest {
@@ -100,14 +128,17 @@ message SendMsgRequest {
   SendMsgRequestContent content = 2;
 }
 
+message ConnectDeviceRequest {
+  // 咕咕鸡设备GUID
+  string smartGuid = 1;
+}
+
 message SendMsgResponse {
   // 纸条ID
   int64 paperID = 1;
 }
 
 message SendMsgRequestContent {
-  // 重要纸条
-  bool important = 1;
   // 纸条数据段, 11个以上可能打印不了
   repeated SendMsgRequestContentContent content = 2;
 }
@@ -125,12 +156,8 @@ message SendMsgRequestContentContent {
     CONTENT_QR = 3;
   }
   ContentType type = 1;
-  // 字体大小
-  enum FontSizeType {
-    FONTSIZE_NORMAL = 0;
-    FONTSIZE_LARGE = 1;
-  }
-  FontSizeType fontSize = 2;
+  // 下划线
+  bool underline = 2;
   // 加粗
   bool bold = 3;
   // 图标ID, 对应图标表
@@ -156,6 +183,8 @@ service ApiService {
   rpc ListOnlineDevices(ListOnlineDevicesRequest) returns (ListOnlineDevicesResponse) {}
   // 获取在线设备详情
   rpc DeviceDetail(GenericRequest) returns (DeviceDetailResponse) {}
+  // 连接设备
+  rpc ConnectDevice(ConnectDeviceRequest) returns (GenericResponse) {}
   // 踢出设备
   rpc KickDevice(GenericRequest) returns (GenericResponse) {}
   // 设置设备参数

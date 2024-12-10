@@ -2,7 +2,7 @@ package helper
 
 import (
 	"connectrpc.com/connect"
-	"github.com/flyqie/memobird-priv/internal/pkg/log"
+	"github.com/flyqie/memobird-priv-bt/internal/pkg/log"
 	"google.golang.org/protobuf/proto"
 )
 

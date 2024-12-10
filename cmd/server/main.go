@@ -4,14 +4,13 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"errors"
-	v1Connect "github.com/flyqie/memobird-priv/gen/memobird/v1/v1connect"
-	"github.com/flyqie/memobird-priv/internal/interceptor"
-	"github.com/flyqie/memobird-priv/internal/model"
-	"github.com/flyqie/memobird-priv/internal/pkg/log"
-	"github.com/flyqie/memobird-priv/internal/service/birdhttp"
-	"github.com/flyqie/memobird-priv/internal/service/birdws"
-	"github.com/flyqie/memobird-priv/internal/service/dns"
-	apiServ "github.com/flyqie/memobird-priv/internal/service/mgr"
+	v1Connect "github.com/flyqie/memobird-priv-bt/gen/memobird/v1/v1connect"
+	"github.com/flyqie/memobird-priv-bt/internal/interceptor"
+	"github.com/flyqie/memobird-priv-bt/internal/model"
+	"github.com/flyqie/memobird-priv-bt/internal/pkg/log"
+	"github.com/flyqie/memobird-priv-bt/internal/service/birdbt"
+	"github.com/flyqie/memobird-priv-bt/internal/service/btmgr"
+	apiServ "github.com/flyqie/memobird-priv-bt/internal/service/mgr"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,7 +32,7 @@ func init() {
 }
 
 func main() {
-	mainLog.Printf("Memobird Priv %s %s", gitTag, dateTime)
+	mainLog.Printf("Memobird Priv BT %s %s", gitTag, dateTime)
 	if token := os.Getenv("ACCESS_TOKEN"); token != "" {
 		interceptor.AccessToken = token
 	} else {
@@ -47,7 +46,9 @@ func main() {
 		mainLog.Printf("MESSAGE_CB_CHECK ENABLE!")
 	}
 	bird := &model.Bird{
-		DeviceMap: make(map[string]*model.BirdDevice),
+		DeviceMap:     make(map[string]*model.BirdDevice),
+		DeviceTempMap: make(map[string]time.Time),
+		BtMgrChan:     make(chan string, 10000),
 	}
 
 	signals := make(chan os.Signal, 1)
@@ -61,8 +62,6 @@ func main() {
 	var errExit bool
 
 	httpServerMux := http.NewServeMux()
-	birdHttp := birdhttp.NewHTTP(ip)
-	birdHttp.Bind(httpServerMux)
 	mgrApi := http.NewServeMux()
 	mgrApi.Handle(v1Connect.NewApiServiceHandler(
 		&apiServ.ApiServer{
@@ -86,32 +85,15 @@ func main() {
 		wg.Done()
 	}()
 
-	birdDns := dns.NewDNS(ip)
+	birdBt := birdbt.NewBT(bird)
+	btMgr := btmgr.NewBTMgr(bird, birdBt)
 	go func() {
-		mainLog.Printf("DNS server listening on 0.0.0.0:53")
-		if err := birdDns.Start(); err != nil {
+		mainLog.Printf("BluetoothMgr listening")
+		if err := btMgr.Start(); err != nil {
 			cancel()
 			errExit = true
 			time.Sleep(time.Second * 2)
-			mainLog.WithError(err).Errorf("DNS listen and serve")
-		}
-		wg.Done()
-	}()
-
-	wsServerMux := http.NewServeMux()
-	birdWS := birdws.NewWS(bird)
-	birdWS.Bind(wsServerMux)
-	wsSrv := &http.Server{
-		Addr:    "0.0.0.0:81",
-		Handler: h2c.NewHandler(wsServerMux, &http2.Server{}),
-	}
-	mainLog.Printf("WEBSOCKET server listening on 0.0.0.0:81")
-	go func() {
-		if err := wsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			cancel()
-			errExit = true
-			time.Sleep(time.Second * 2)
-			mainLog.WithError(err).Errorf("WEBSOCKET listen and serve")
+			mainLog.WithError(err).Errorf("BluetoothMgr listen and serve")
 		}
 		wg.Done()
 	}()
@@ -124,14 +106,8 @@ func main() {
 		mainLog.WithError(err).Fatalf("HTTP shutdown")
 	}
 	wg.Add(1)
-	if err := birdDns.Stop(); err != nil {
+	if err := btMgr.Stop(); err != nil {
 		mainLog.WithError(err).Fatalf("DNS shutdown")
-	}
-	wg.Add(1)
-	ctx3, cancel3 := context.WithTimeout(context.Background(), time.Second)
-	defer cancel3()
-	if err := wsSrv.Shutdown(ctx3); err != nil {
-		mainLog.WithError(err).Fatalf("WEBSOCKET shutdown")
 	}
 	wg.Wait()
 	if errExit {

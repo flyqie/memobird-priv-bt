@@ -3,6 +3,8 @@ package model
 const (
 	// DeviceNotFound 设备不存在
 	DeviceNotFound = "device_not_found"
+	// DeviceAlreadyConnected 设备已连接
+	DeviceAlreadyConnected = "device_already_connected"
 	// DeviceKickFailed 设备踢出失败
 	DeviceKickFailed = "device_kick_failed"
 	// DeviceSendFailed 设备发送失败
