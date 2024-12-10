@@ -38,10 +38,6 @@ func main() {
 	} else {
 		mainLog.Printf("Security Warning: ACCESS_TOKEN has not been set!")
 	}
-	var ip string
-	if ip = os.Getenv("PRIV_SERVER_IP"); ip == "" {
-		mainLog.Fatalf("PRIV_SERVER_IP has not been set!")
-	}
 	if os.Getenv("MESSAGE_CB_CHECK") == "ENABLE" {
 		mainLog.Printf("MESSAGE_CB_CHECK ENABLE!")
 	}
