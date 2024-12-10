@@ -203,7 +203,7 @@ msgHandler:
 		case msg := <-device.PaperMessageQueue:
 			// 有消息了
 			device.MsgQueueCount.Add(-1)
-			msgByte, err := b.makeMsg(device, msg)
+			msgByte, forceContinue, err := b.makeMsg(device, msg)
 			if err != nil {
 				btLog.WithField("smartGuid", device.SmartGuid).WithError(err).Errorf("makeMsg")
 				continue
@@ -214,7 +214,7 @@ msgHandler:
 				btLog.WithField("smartGuid", device.SmartGuid).WithError(err).Errorf("Write")
 				break msgHandler
 			}
-			if device.PaperMessageCallbackQueue != nil {
+			if device.PaperMessageCallbackQueue != nil && !forceContinue {
 				select {
 				case cbMsg := <-device.PaperMessageCallbackQueue:
 					// 有回调
@@ -229,7 +229,8 @@ msgHandler:
 	_ = unix.Close(device.FD)
 }
 
-func (b *Bird) makeMsg(device *model.BirdDevice, msg *model.BirdPaperMessage) ([]byte, error) {
+func (b *Bird) makeMsg(device *model.BirdDevice, msg *model.BirdPaperMessage) ([]byte, bool, error) {
+	var forceContinue bool
 	msgBytes := make([]byte, 0)
 	if msg.Content.Type == 1 {
 		// 打印文字
@@ -251,8 +252,9 @@ func (b *Bird) makeMsg(device *model.BirdDevice, msg *model.BirdPaperMessage) ([
 		// 1024byte空字节
 		_msgBytes := make([]byte, 1024)
 		msgBytes = append(msgBytes, _msgBytes...)
+		forceContinue = true
 	}
-	return msgBytes, nil
+	return msgBytes, forceContinue, nil
 }
 
 func (b *Bird) handlerMessage(device *model.BirdDevice, msg []byte) {

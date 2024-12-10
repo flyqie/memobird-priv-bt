@@ -259,11 +259,18 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 	if v, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
 		var paperID int64 = 0
 		if v.PaperMessageQueue != nil {
-			var pkgCount int64 = 1
+			var pkgCount int64 = 0
 			var pkgNo int64 = 0
 			var papers []*model.BirdPaperMessage
 			var contentNo = 0
 			paperID = time.Now().UnixMilli()
+			// 做两个空白内容来刷新
+			for i := 0; i < 2; i++ {
+				papers = append(papers, &model.BirdPaperMessage{
+					Content: model.BirdPaperMessageContent{Type: 0},
+					PaperID: paperID,
+				})
+			}
 			for {
 				if contentNo > (len(req.Msg.Content.Content) - 1) {
 					break
@@ -299,14 +306,13 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 					contentNo++
 				}
 				paperMsg := model.BirdPaperMessage{
-					PaperCount: 0,
-					PaperNo:    pkgNo,
-					Content:    paperMsgContent,
-					PaperID:    paperID,
+					PaperNo: pkgNo,
+					Content: paperMsgContent,
+					PaperID: paperID,
 				}
 				papers = append(papers, &paperMsg)
 			}
-			papersLen := len(papers)
+			papersLen := len(papers) - 2
 			for k := range papers {
 				papers[k].PaperCount = int64(papersLen)
 			}
