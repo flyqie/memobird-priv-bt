@@ -9,6 +9,8 @@ import (
 	"github.com/muka/go-bluetooth/api"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/device"
+	"github.com/muka/go-bluetooth/hw"
+	"strings"
 )
 
 var btMgrLog log.Logger
@@ -36,6 +38,25 @@ func NewBTMgr(bird *model.Bird, birdBt *birdbt.Bird) *Bird {
 
 func (b *Bird) Start() error {
 	var err error
+
+	btmgmt := hw.NewBtMgmt("hci0")
+	err = btmgmt.SetPowered(false)
+	if err != nil {
+		return err
+	}
+	err = btmgmt.SetLe(true)
+	if err != nil {
+		return err
+	}
+	err = btmgmt.SetBredr(true)
+	if err != nil {
+		return err
+	}
+	err = btmgmt.SetPowered(true)
+	if err != nil {
+		return err
+	}
+
 	b.a, err = adapter.NewAdapter1FromAdapterID("hci0")
 	if err != nil {
 		return err
@@ -65,11 +86,13 @@ func (b *Bird) Stop() error {
 func (b *Bird) discover(btMac string) error {
 	err := b.a.FlushDevices()
 	if err != nil {
+		btMgrLog.WithField("btMac", btMac).Debugf("111111")
 		return err
 	}
 
 	discovery, cancel, err := api.Discover(b.a, nil)
 	if err != nil {
+		btMgrLog.WithField("btMac", btMac).Debugf("222222")
 		return err
 	}
 	defer cancel()
@@ -84,12 +107,12 @@ func (b *Bird) discover(btMac string) error {
 		}
 
 		p := dev.Properties
-		if p.Address != btMac {
+		if strings.ToLower(p.Address) != btMac {
 			continue
 		}
 
 		go func(dev *device.Device1) {
-			b.birdBt.HandleDevice("hci0", dev)
+			b.birdBt.HandleDevice(btMac, dev)
 		}(dev)
 		return nil
 	}

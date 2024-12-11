@@ -20,5 +20,6 @@ require (
 	github.com/godbus/dbus/v5 v5.0.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/text v0.20.0 // indirect
 )

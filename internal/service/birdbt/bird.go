@@ -151,8 +151,8 @@ func (b *Bird) HandleDevice(smartGuid string, dev *device.Device1) {
 		}
 		if len(buffer) == bufferMaxLen {
 			// 完整读取了!!!
-			btLog.WithField("smartGuid", tempDevice.SmartGuid).Debugf("CHUNK OK!!!")
-			handlerMsgBytes := make([]byte, len(buffer))
+			btLog.WithField("smartGuid", tempDevice.SmartGuid).Debugf("buffer valid")
+			handlerMsgBytes := make([]byte, 0)
 			handlerMsgBytes = append(handlerMsgBytes, buffer...)
 			buffer = make([]byte, 0)
 			bufferMaxLen = 0

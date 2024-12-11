@@ -62,7 +62,7 @@ func (s *ApiServer) ConnectDevice(ctx context.Context, req *connect.Request[v1.C
 	if req.Msg.SmartGuid == "" {
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
 	}
-	if _, err := net.ParseMAC(req.Msg.SmartGuid); err == nil {
+	if _, err := net.ParseMAC(req.Msg.SmartGuid); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
 	}
 	if len(req.Msg.SmartGuid) != 17 {
@@ -72,7 +72,6 @@ func (s *ApiServer) ConnectDevice(ctx context.Context, req *connect.Request[v1.C
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
 
 	s.Bird.DeviceMapLock.RLock()
-	defer s.Bird.DeviceMapLock.RUnlock()
 	if _, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
 		s.Bird.DeviceMapLock.RUnlock()
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceAlreadyConnected))
@@ -80,12 +79,11 @@ func (s *ApiServer) ConnectDevice(ctx context.Context, req *connect.Request[v1.C
 		s.Bird.DeviceMapLock.RUnlock()
 	}
 	s.Bird.DeviceTempMapLock.RLock()
-	defer s.Bird.DeviceTempMapLock.RUnlock()
 	if _, ok := s.Bird.DeviceTempMap[req.Msg.SmartGuid]; ok {
 		s.Bird.DeviceTempMapLock.RUnlock()
 		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceAlreadyConnected))
 	} else {
-		s.Bird.DeviceMapLock.RUnlock()
+		s.Bird.DeviceTempMapLock.RUnlock()
 	}
 	s.Bird.DeviceMapLock.Lock()
 	s.Bird.DeviceTempMap[req.Msg.SmartGuid] = time.Now()
@@ -278,6 +276,7 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 				pkgNo++
 				paperMsgContent := model.BirdPaperMessageContent{}
 				_paperData := req.Msg.Content.Content[contentNo]
+				// TODO: 图片分包有问题, 只能打印第一个分出来的包
 				_maxLen := 1024
 				if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_TEXT {
 					_maxLen = 500
@@ -286,12 +285,14 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 					paperMsgContent.Type = 1
 				} else if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_IMAGE {
 					paperMsgContent.Type = 2
+					paperMsgContent.LongPic = true
 				} else if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_ICON {
 					paperMsgContent.Type = 3
 				} else if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_QR {
 					paperMsgContent.Type = 4
 				}
 				isContentEnd := true
+				apiServerLog.WithField("imglen", len(_paperData.BaseText)).Debugf("SendMsg")
 				if len(_paperData.BaseText) > _maxLen {
 					isContentEnd = false
 					paperMsgContent.Content = string(_paperData.BaseText[:_maxLen])
@@ -312,9 +313,9 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 				}
 				papers = append(papers, &paperMsg)
 			}
-			papersLen := len(papers) - 2
+			pkgCount = int64(len(papers)) - 2
 			for k := range papers {
-				papers[k].PaperCount = int64(papersLen)
+				papers[k].PaperCount = pkgCount
 			}
 
 			if len(papers) > 1 {
