@@ -20,17 +20,19 @@ func init() {
 }
 
 type Bird struct {
-	bird   *model.Bird
-	ctx    context.Context
-	cancel context.CancelFunc
-	a      *adapter.Adapter1
-	birdBt *birdbt.Bird
+	bird    *model.Bird
+	ctx     context.Context
+	cancel  context.CancelFunc
+	a       *adapter.Adapter1
+	birdBt  *birdbt.Bird
+	btIface string
 }
 
-func NewBTMgr(bird *model.Bird, birdBt *birdbt.Bird) *Bird {
+func NewBTMgr(bird *model.Bird, birdBt *birdbt.Bird, btIface string) *Bird {
 	b := &Bird{
-		bird:   bird,
-		birdBt: birdBt,
+		bird:    bird,
+		birdBt:  birdBt,
+		btIface: btIface,
 	}
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 	return b
@@ -39,7 +41,7 @@ func NewBTMgr(bird *model.Bird, birdBt *birdbt.Bird) *Bird {
 func (b *Bird) Start() error {
 	var err error
 
-	btmgmt := hw.NewBtMgmt("hci0")
+	btmgmt := hw.NewBtMgmt(b.btIface)
 	err = btmgmt.SetPowered(false)
 	if err != nil {
 		return err
@@ -57,7 +59,7 @@ func (b *Bird) Start() error {
 		return err
 	}
 
-	b.a, err = adapter.NewAdapter1FromAdapterID("hci0")
+	b.a, err = adapter.NewAdapter1FromAdapterID(b.btIface)
 	if err != nil {
 		return err
 	}

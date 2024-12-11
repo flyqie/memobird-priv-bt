@@ -21,12 +21,14 @@ func init() {
 }
 
 type Bird struct {
-	bird *model.Bird
+	bird    *model.Bird
+	btIface string
 }
 
-func NewBT(bird *model.Bird) *Bird {
+func NewBT(bird *model.Bird, btIface string) *Bird {
 	return &Bird{
-		bird: bird,
+		bird:    bird,
+		btIface: btIface,
 	}
 }
 
@@ -64,7 +66,7 @@ func (b *Bird) HandleDevice(smartGuid string, dev *device.Device1) {
 		delete(b.bird.DeviceMap, tempDevice.SmartGuid)
 		b.bird.DeviceMapLock.Unlock()
 	}(tempDevice)
-	err := b.btPair(dev, "hci0")
+	err := b.btPair(dev, b.btIface)
 	if err != nil {
 		btLog.WithField("smartGuid", tempDevice.SmartGuid).WithError(err).Errorf("Pair")
 		return

@@ -41,6 +41,11 @@ func main() {
 	if os.Getenv("MESSAGE_CB_CHECK") == "ENABLE" {
 		mainLog.Printf("MESSAGE_CB_CHECK ENABLE!")
 	}
+	btIface := "hci0"
+	if os.Getenv("BT_IFACE") != "" {
+		btIface = os.Getenv("BT_IFACE")
+	}
+	mainLog.Printf("Bluetooth Interface: %s", btIface)
 	bird := &model.Bird{
 		DeviceMap:     make(map[string]*model.BirdDevice),
 		DeviceTempMap: make(map[string]time.Time),
@@ -81,8 +86,8 @@ func main() {
 		wg.Done()
 	}()
 
-	birdBt := birdbt.NewBT(bird)
-	btMgr := btmgr.NewBTMgr(bird, birdBt)
+	birdBt := birdbt.NewBT(bird, btIface)
+	btMgr := btmgr.NewBTMgr(bird, birdBt, btIface)
 	go func() {
 		mainLog.Printf("BluetoothMgr listening")
 		if err := btMgr.Start(); err != nil {

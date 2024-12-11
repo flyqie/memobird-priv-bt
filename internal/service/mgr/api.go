@@ -284,15 +284,18 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 				if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_TEXT {
 					paperMsgContent.Type = 1
 				} else if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_IMAGE {
-					paperMsgContent.Type = 2
-					paperMsgContent.LongPic = true
+					// TODO: 暂时禁用图片
+					/*
+						paperMsgContent.Type = 2
+						paperMsgContent.LongPic = true
+					*/
+					return nil, connect.NewError(connect.CodeUnimplemented, errors.New("CONTENT_IMAGE unimplemented"))
 				} else if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_ICON {
 					paperMsgContent.Type = 3
 				} else if _paperData.Type == v1.SendMsgRequestContentContent_CONTENT_QR {
 					paperMsgContent.Type = 4
 				}
 				isContentEnd := true
-				apiServerLog.WithField("imglen", len(_paperData.BaseText)).Debugf("SendMsg")
 				if len(_paperData.BaseText) > _maxLen {
 					isContentEnd = false
 					paperMsgContent.Content = string(_paperData.BaseText[:_maxLen])
