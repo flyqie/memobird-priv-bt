@@ -34,6 +34,8 @@ func (b *Bird) HandleDevice(smartGuid string, dev *device.Device1) {
 	tempDevice := &model.BirdDevice{}
 	tempDevice.SmartGuid = smartGuid
 	tempDevice.Bssid = dev.Properties.Address
+	tempDevice.JoinTime = time.Now()
+	tempDevice.Elec = -1
 	tempDevice.MsgCount = &atomic.Int64{}
 	tempDevice.MsgQueueCount = &atomic.Int64{}
 	tempDevice.PaperMessageQueue = make(chan *model.BirdPaperMessage, 10000)
@@ -194,6 +196,14 @@ func (b *Bird) btPair(dev *device.Device1, adapterID string) error {
 }
 
 func (b *Bird) handlerWriteChan(device *model.BirdDevice) {
+	time.Sleep(2 * time.Second)
+	_, err := unix.Write(device.FD, birdproto.GetDevice())
+	if err != nil {
+		btLog.WithField("smartGuid", device.SmartGuid).WithError(err).Errorf("Write GetDevice")
+		_ = unix.Close(device.FD)
+		return
+	}
+
 msgHandler:
 	for {
 		select {
