@@ -62,7 +62,6 @@ func main() {
 	wg := &sync.WaitGroup{}
 	var errExit bool
 
-	httpServerMux := http.NewServeMux()
 	mgrApi := http.NewServeMux()
 	mgrApi.Handle(v1Connect.NewApiServiceHandler(
 		&apiServ.ApiServer{
@@ -70,18 +69,17 @@ func main() {
 		},
 		connect.WithInterceptors(interceptor.NewAuthInterceptor()),
 	))
-	httpServerMux.Handle("/mgr_api/", http.StripPrefix("/mgr_api", mgrApi))
-	httpSrv := &http.Server{
-		Addr:    "0.0.0.0:80",
-		Handler: h2c.NewHandler(httpServerMux, &http2.Server{}),
+	mgrApiSrv := &http.Server{
+		Addr:    "0.0.0.0:82",
+		Handler: h2c.NewHandler(mgrApi, &http2.Server{}),
 	}
-	mainLog.Printf("HTTP server listening on 0.0.0.0:80")
+	mainLog.Printf("mgrApi server listening on 0.0.0.0:82")
 	go func() {
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := mgrApiSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			cancel()
 			errExit = true
 			time.Sleep(time.Second * 2)
-			mainLog.WithError(err).Errorf("HTTP listen and serve")
+			mainLog.WithError(err).Errorf("mgrApi listen and serve")
 		}
 		wg.Done()
 	}()
@@ -103,8 +101,8 @@ func main() {
 	wg.Add(1)
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel2()
-	if err := httpSrv.Shutdown(ctx2); err != nil {
-		mainLog.WithError(err).Fatalf("HTTP shutdown")
+	if err := mgrApiSrv.Shutdown(ctx2); err != nil {
+		mainLog.WithError(err).Fatalf("mgrApiSrv shutdown")
 	}
 	wg.Add(1)
 	if err := btMgr.Stop(); err != nil {
