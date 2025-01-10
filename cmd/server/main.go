@@ -70,10 +70,10 @@ func main() {
 		connect.WithInterceptors(interceptor.NewAuthInterceptor()),
 	))
 	mgrApiSrv := &http.Server{
-		Addr:    "0.0.0.0:82",
+		Addr:    "0.0.0.0:8082",
 		Handler: h2c.NewHandler(mgrApi, &http2.Server{}),
 	}
-	mainLog.Printf("mgrApi server listening on 0.0.0.0:82")
+	mainLog.Printf("mgrApi server listening on 0.0.0.0:8082")
 	go func() {
 		if err := mgrApiSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			cancel()
