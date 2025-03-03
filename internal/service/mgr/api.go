@@ -36,7 +36,7 @@ type ApiServer struct {
 
 func (s *ApiServer) KickDevice(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error) {
 	if req.Msg.SmartGuid == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	// 转换为全小写
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
@@ -54,19 +54,19 @@ func (s *ApiServer) KickDevice(ctx context.Context, req *connect.Request[v1.Gene
 		}
 		return connect.NewResponse(&v1.GenericResponse{}), nil
 	} else {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 }
 
 func (s *ApiServer) ConnectDevice(ctx context.Context, req *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error) {
 	if req.Msg.SmartGuid == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	if _, err := net.ParseMAC(req.Msg.SmartGuid); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	if len(req.Msg.SmartGuid) != 17 {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	// 转换为全小写
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
@@ -74,14 +74,14 @@ func (s *ApiServer) ConnectDevice(ctx context.Context, req *connect.Request[v1.C
 	s.Bird.DeviceMapLock.RLock()
 	if _, ok := s.Bird.DeviceMap[req.Msg.SmartGuid]; ok {
 		s.Bird.DeviceMapLock.RUnlock()
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceAlreadyConnected))
+		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New(model.DeviceAlreadyConnected))
 	} else {
 		s.Bird.DeviceMapLock.RUnlock()
 	}
 	s.Bird.DeviceTempMapLock.RLock()
 	if _, ok := s.Bird.DeviceTempMap[req.Msg.SmartGuid]; ok {
 		s.Bird.DeviceTempMapLock.RUnlock()
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceAlreadyConnected))
+		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New(model.DeviceAlreadyConnected))
 	} else {
 		s.Bird.DeviceTempMapLock.RUnlock()
 	}
@@ -125,7 +125,7 @@ func (s *ApiServer) ListOnlineDevices(ctx context.Context, req *connect.Request[
 
 func (s *ApiServer) DeviceDetail(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
 	if req.Msg.SmartGuid == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	// 转换为全小写
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
@@ -180,14 +180,14 @@ func (s *ApiServer) DeviceDetail(ctx context.Context, req *connect.Request[v1.Ge
 				DeviceStatus: v1.DeviceDetailResponse_DEVICE_STATUS_CONNECTING,
 			}), nil
 		} else {
-			return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+			return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 		}
 	}
 }
 
 func (s *ApiServer) SetDevice(ctx context.Context, req *connect.Request[v1.SetDeviceRequest]) (*connect.Response[v1.GenericResponse], error) {
 	if req.Msg.SmartGuid == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	// 转换为全小写
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
@@ -241,13 +241,13 @@ func (s *ApiServer) SetDevice(ctx context.Context, req *connect.Request[v1.SetDe
 		}
 		return connect.NewResponse(&v1.GenericResponse{}), nil
 	} else {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 }
 
 func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error) {
 	if req.Msg.SmartGuid == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	// 转换为全小写
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
@@ -341,13 +341,13 @@ func (s *ApiServer) SendMsg(ctx context.Context, req *connect.Request[v1.SendMsg
 			PaperID: paperID,
 		}), nil
 	} else {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 }
 
 func (s *ApiServer) UnlockDeviceMessageCallback(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.GenericResponse], error) {
 	if req.Msg.SmartGuid == "" {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 	// 转换为全小写
 	req.Msg.SmartGuid = strings.ToLower(req.Msg.SmartGuid)
@@ -360,7 +360,7 @@ func (s *ApiServer) UnlockDeviceMessageCallback(ctx context.Context, req *connec
 		}
 		return connect.NewResponse(&v1.GenericResponse{}), nil
 	} else {
-		return nil, connect.NewError(connect.CodeInternal, errors.New(model.DeviceNotFound))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New(model.DeviceNotFound))
 	}
 }
 
