@@ -66,10 +66,10 @@ func (b *Bird) Start() error {
 	for {
 		select {
 		case btMac := <-b.bird.BtMgrChan:
-			btMgrLog.WithField("btMac", btMac).WithError(err).Debugf("Discover")
+			btMgrLog.WithField("btMac", btMac).Debug("discover device")
 			err = b.discover(btMac)
 			if err != nil {
-				btMgrLog.WithField("btMac", btMac).WithError(err).Errorf("Discover failed")
+				btMgrLog.WithField("btMac", btMac).WithError(err).Error("discover device failed")
 			}
 			b.bird.DeviceTempMapLock.Lock()
 			delete(b.bird.DeviceTempMap, btMac)
@@ -88,13 +88,11 @@ func (b *Bird) Stop() error {
 func (b *Bird) discover(btMac string) error {
 	err := b.a.FlushDevices()
 	if err != nil {
-		btMgrLog.WithField("btMac", btMac).Debugf("111111")
 		return err
 	}
 
 	discovery, cancel, err := api.Discover(b.a, nil)
 	if err != nil {
-		btMgrLog.WithField("btMac", btMac).Debugf("222222")
 		return err
 	}
 	defer cancel()

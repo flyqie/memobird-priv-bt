@@ -32,20 +32,23 @@ func init() {
 }
 
 func main() {
-	mainLog.Printf("Memobird Priv BT %s %s", gitTag, dateTime)
+	mainLog.Infof("memobird-priv-bt %s %s", gitTag, dateTime)
 	if token := os.Getenv("ACCESS_TOKEN"); token != "" {
 		interceptor.AccessToken = token
 	} else {
-		mainLog.Printf("Security Warning: ACCESS_TOKEN has not been set!")
+		mainLog.Warn("ACCESS_TOKEN is not set, API authentication is disabled")
 	}
 	if os.Getenv("MESSAGE_CB_CHECK") == "ENABLE" {
-		mainLog.Printf("MESSAGE_CB_CHECK ENABLE!")
+		mainLog.Info("paper message callback check enabled")
+	}
+	if v := os.Getenv("BT_PACKET_INTERVAL_MS"); v != "" {
+		mainLog.WithField("value", v).Info("BT_PACKET_INTERVAL_MS is set")
 	}
 	btIface := "hci0"
 	if os.Getenv("BT_IFACE") != "" {
 		btIface = os.Getenv("BT_IFACE")
 	}
-	mainLog.Printf("Bluetooth Interface: %s", btIface)
+	mainLog.WithField("btIface", btIface).Info("bluetooth interface")
 	bird := &model.Bird{
 		DeviceMap:     make(map[string]*model.BirdDevice),
 		DeviceTempMap: make(map[string]time.Time),
@@ -73,13 +76,15 @@ func main() {
 		Addr:    "0.0.0.0:8082",
 		Handler: h2c.NewHandler(mgrApi, &http2.Server{}),
 	}
-	mainLog.Printf("mgrApi server listening on 0.0.0.0:8082")
+	mainLog.Info("api server listening on 0.0.0.0:8082")
+	// Add 必须在启动 goroutine 之前，否则 Done() 先跑会把计数变成负数并 panic
+	wg.Add(2)
 	go func() {
 		if err := mgrApiSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			cancel()
 			errExit = true
 			time.Sleep(time.Second * 2)
-			mainLog.WithError(err).Errorf("mgrApi listen and serve")
+			mainLog.WithError(err).Error("api server stopped")
 		}
 		wg.Done()
 	}()
@@ -87,26 +92,25 @@ func main() {
 	birdBt := birdbt.NewBT(bird, btIface)
 	btMgr := btmgr.NewBTMgr(bird, birdBt, btIface)
 	go func() {
-		mainLog.Printf("BluetoothMgr listening")
+		mainLog.Info("bluetooth manager started")
 		if err := btMgr.Start(); err != nil {
 			cancel()
 			errExit = true
 			time.Sleep(time.Second * 2)
-			mainLog.WithError(err).Errorf("BluetoothMgr listen and serve")
+			mainLog.WithError(err).Error("bluetooth manager stopped")
 		}
 		wg.Done()
 	}()
 
 	<-ctx.Done()
-	wg.Add(1)
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel2()
+	// 用 Error 而不是 Fatal：Fatal 会直接 os.Exit，跳过下面的 wg.Wait()
 	if err := mgrApiSrv.Shutdown(ctx2); err != nil {
-		mainLog.WithError(err).Fatalf("mgrApiSrv shutdown")
+		mainLog.WithError(err).Error("api server shutdown failed")
 	}
-	wg.Add(1)
 	if err := btMgr.Stop(); err != nil {
-		mainLog.WithError(err).Fatalf("DNS shutdown")
+		mainLog.WithError(err).Error("bluetooth manager shutdown failed")
 	}
 	wg.Wait()
 	if errExit {

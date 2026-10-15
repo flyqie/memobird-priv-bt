@@ -72,7 +72,7 @@ type ApiServiceClient interface {
 	// 获取在线设备列表
 	ListOnlineDevices(context.Context, *connect.Request[v1.ListOnlineDevicesRequest]) (*connect.Response[v1.ListOnlineDevicesResponse], error)
 	// 获取在线设备详情
-	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
+	DeviceDetail(context.Context, *connect.Request[v1.DeviceDetailRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
 	// 连接设备
 	ConnectDevice(context.Context, *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 踢出设备
@@ -103,7 +103,7 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(apiServiceListOnlineDevicesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		deviceDetail: connect.NewClient[v1.GenericRequest, v1.DeviceDetailResponse](
+		deviceDetail: connect.NewClient[v1.DeviceDetailRequest, v1.DeviceDetailResponse](
 			httpClient,
 			baseURL+ApiServiceDeviceDetailProcedure,
 			connect.WithSchema(apiServiceDeviceDetailMethodDescriptor),
@@ -151,7 +151,7 @@ func NewApiServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 // apiServiceClient implements ApiServiceClient.
 type apiServiceClient struct {
 	listOnlineDevices           *connect.Client[v1.ListOnlineDevicesRequest, v1.ListOnlineDevicesResponse]
-	deviceDetail                *connect.Client[v1.GenericRequest, v1.DeviceDetailResponse]
+	deviceDetail                *connect.Client[v1.DeviceDetailRequest, v1.DeviceDetailResponse]
 	connectDevice               *connect.Client[v1.ConnectDeviceRequest, v1.GenericResponse]
 	kickDevice                  *connect.Client[v1.GenericRequest, v1.GenericResponse]
 	setDevice                   *connect.Client[v1.SetDeviceRequest, v1.GenericResponse]
@@ -166,7 +166,7 @@ func (c *apiServiceClient) ListOnlineDevices(ctx context.Context, req *connect.R
 }
 
 // DeviceDetail calls memobird.v1.ApiService.DeviceDetail.
-func (c *apiServiceClient) DeviceDetail(ctx context.Context, req *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
+func (c *apiServiceClient) DeviceDetail(ctx context.Context, req *connect.Request[v1.DeviceDetailRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
 	return c.deviceDetail.CallUnary(ctx, req)
 }
 
@@ -205,7 +205,7 @@ type ApiServiceHandler interface {
 	// 获取在线设备列表
 	ListOnlineDevices(context.Context, *connect.Request[v1.ListOnlineDevicesRequest]) (*connect.Response[v1.ListOnlineDevicesResponse], error)
 	// 获取在线设备详情
-	DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
+	DeviceDetail(context.Context, *connect.Request[v1.DeviceDetailRequest]) (*connect.Response[v1.DeviceDetailResponse], error)
 	// 连接设备
 	ConnectDevice(context.Context, *connect.Request[v1.ConnectDeviceRequest]) (*connect.Response[v1.GenericResponse], error)
 	// 踢出设备
@@ -305,7 +305,7 @@ func (UnimplementedApiServiceHandler) ListOnlineDevices(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.ListOnlineDevices is not implemented"))
 }
 
-func (UnimplementedApiServiceHandler) DeviceDetail(context.Context, *connect.Request[v1.GenericRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
+func (UnimplementedApiServiceHandler) DeviceDetail(context.Context, *connect.Request[v1.DeviceDetailRequest]) (*connect.Response[v1.DeviceDetailResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memobird.v1.ApiService.DeviceDetail is not implemented"))
 }
 

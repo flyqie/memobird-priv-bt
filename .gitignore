@@ -1,0 +1,14 @@
+# 编译产物
+/build_linux
+/server
+*.exe
+*.test
+*.out
+
+# IDE
+/.idea/
+/.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db

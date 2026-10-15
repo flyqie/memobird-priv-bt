@@ -27,6 +27,14 @@ message ListOnlineDevicesResponse {
   repeated string onlineDevices = 1;
 }
 
+message DeviceDetailRequest {
+  // 咕咕鸡设备GUID
+  string smartGuid = 1;
+  // 为 true 时先补发一次握手、等设备应答后再返回，保证读到的是最新状态。
+  // 设备没应答（超时或已断连）时返回上一次缓存的值，不报错。
+  bool refresh = 2;
+}
+
 message DeviceDetailResponse {
   // 咕咕鸡设备GUID
   string smartGuid = 1;
@@ -70,6 +78,8 @@ message DeviceDetailResponse {
     AUTO_SHUTDOWN_TIME_180 = 4;
     // 4小时
     AUTO_SHUTDOWN_TIME_240 = 5;
+    // 不自动关机
+    AUTO_SHUTDOWN_TIME_NONE = 6;
   }
   AutoShutdownType autoShutdown = 8;
   // 设备加入时间
@@ -82,6 +92,12 @@ message DeviceDetailResponse {
   string model = 12;
   // 消息回调监控
   bool cbCheck = 13;
+  // 打印浓度原始值(1-30)。
+  // deep 是按最接近的一档归类后的结果，需要精确值时用这个；0 表示还没握过手。
+  int32 deepRaw = 14;
+  // 自动关机分钟数原始值，0 表示不自动关机。
+  // autoShutdown 枚举只有固定的几档，表达不了 0 和任意分钟数，所以单独给一份原始值。
+  int32 autoShutdownMinutes = 15;
 }
 
 message SetDeviceRequest {
@@ -110,6 +126,8 @@ message SetDeviceRequest {
     AUTO_SHUTDOWN_TIME_180 = 4;
     // 4小时
     AUTO_SHUTDOWN_TIME_240 = 5;
+    // 不自动关机（协议里对应 0 分钟）
+    AUTO_SHUTDOWN_TIME_NONE = 6;
   }
   oneof setting {
     // LED
@@ -171,6 +189,12 @@ message SendMsgRequestContentContent {
 message MakeMonoBmpRequest {
   // 原始图片数据(支持PNG、JPEG)
   bytes image = 1;
+  // 目标纸宽(像素)。0 或不传 = 384。
+  // 384 = 大部分机型；576 = G4 / G5 / Teen HD。
+  // 图片比纸宽大时等比缩小，比纸宽小则不放大。
+  int32 width = 2;
+  // 是否把图片水平居中。默认 false = 左对齐(与官方 SDK 一致)。
+  bool center = 3;
 }
 
 message MakeMonoBmpResponse {
@@ -182,7 +206,7 @@ service ApiService {
   // 获取在线设备列表
   rpc ListOnlineDevices(ListOnlineDevicesRequest) returns (ListOnlineDevicesResponse) {}
   // 获取在线设备详情
-  rpc DeviceDetail(GenericRequest) returns (DeviceDetailResponse) {}
+  rpc DeviceDetail(DeviceDetailRequest) returns (DeviceDetailResponse) {}
   // 连接设备
   rpc ConnectDevice(ConnectDeviceRequest) returns (GenericResponse) {}
   // 踢出设备
